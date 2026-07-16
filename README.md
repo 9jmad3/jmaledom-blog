@@ -42,6 +42,17 @@ Railway detecta y compila automáticamente este proyecto como un sitio estático
 
 No es necesario configurar manualmente los comandos de build o start.
 
+## Analítica respetuosa con la privacidad
+
+El blog incluye soporte para [Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/), sin cookies y desactivado durante el desarrollo local.
+
+1. En Cloudflare Web Analytics, añade `jmaledom-blog-production.up.railway.app` como sitio sin proxy.
+2. Copia el token que aparece en el snippet de JavaScript.
+3. En Railway, añade `PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN` con ese token.
+4. Vuelve a desplegar el servicio.
+
+El token se inyecta durante la compilación y no se guarda en el repositorio.
+
 ## Añadir un artículo
 
 Crea un Markdown en `src/content/blog/` con un encabezado como este:
