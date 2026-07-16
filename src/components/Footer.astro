@@ -6,12 +6,14 @@ const today = new Date();
 	<span>&copy; {today.getFullYear()} {AUTHOR_NAME} · jmaledom</span>
 	<nav class="footer-links" aria-label="Enlaces del pie de página">
 		<a href="/privacidad">Privacidad</a>
+		<span aria-hidden="true">·</span>
 		<a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a>
 	</nav>
 </footer>
 <style>
-	footer { padding:2.5em 1em 4em; color:var(--muted); text-align:center; border-top:1px solid var(--border); }
-	.footer-links { display:flex; justify-content:center; gap:1.25em; margin-top:.6em; }
+	footer { display:flex; padding:2.5em 1em 4em; color:var(--muted); text-align:center; border-top:1px solid var(--border); flex-direction:column; align-items:center; gap:1rem; }
+	.footer-links { display:flex; justify-content:center; align-items:center; gap:.85em; }
 	.footer-links a { color:var(--muted); text-decoration:none; font-weight:700; }
 	.footer-links a:hover { color:var(--accent); }
+	.footer-links span { color:var(--border); }
 </style>
