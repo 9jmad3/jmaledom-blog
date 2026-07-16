@@ -4,11 +4,14 @@ const today = new Date();
 ---
 <footer>
 	<span>&copy; {today.getFullYear()} {AUTHOR_NAME} · jmaledom</span>
-	<div class="social-links"><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a></div>
+	<nav class="footer-links" aria-label="Enlaces del pie de página">
+		<a href="/privacidad">Privacidad</a>
+		<a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a>
+	</nav>
 </footer>
 <style>
 	footer { padding:2.5em 1em 4em; color:var(--muted); text-align:center; border-top:1px solid var(--border); }
-	.social-links { display:flex; justify-content:center; gap:1.25em; margin-top:.6em; }
-	.social-links a { color:var(--muted); text-decoration:none; font-weight:700; }
-	.social-links a:hover { color:var(--accent); }
+	.footer-links { display:flex; justify-content:center; gap:1.25em; margin-top:.6em; }
+	.footer-links a { color:var(--muted); text-decoration:none; font-weight:700; }
+	.footer-links a:hover { color:var(--accent); }
 </style>
