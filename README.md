@@ -37,7 +37,7 @@ Railway detecta y compila automáticamente este proyecto como un sitio estático
 1. Crea un proyecto en Railway.
 2. Selecciona **Deploy from GitHub repo** y elige este repositorio.
 3. En **Settings → Networking**, pulsa **Generate Domain**.
-4. Añade la variable `SITE_URL` con la URL pública completa.
+4. Añade la variable `SITE_URL` con la URL pública completa: `https://jmaledom-blog-production.up.railway.app`.
 5. Vuelve a desplegar para generar los enlaces canónicos, el sitemap y las imágenes sociales con el dominio correcto.
 
 No es necesario configurar manualmente los comandos de build o start.

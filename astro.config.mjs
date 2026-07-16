@@ -6,7 +6,7 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 // https://astro.build/config
 export default defineConfig({
-	site: process.env.SITE_URL ?? 'http://localhost:4321',
+	site: process.env.SITE_URL ?? 'https://jmaledom-blog-production.up.railway.app',
 	integrations: [mdx(), sitemap()],
 	fonts: [
 		{
