@@ -1,0 +1,80 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import Header from '../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+
+const [latestPost] = (await getCollection('blog')).sort(
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+---
+<!doctype html>
+<html lang="es">
+	<head><BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} /></head>
+	<body>
+		<Header />
+		<main class="home">
+			<section class="hero">
+				<p class="eyebrow">Hola, soy José</p>
+				<h1>Vida, código<br />y movimiento<span>.</span></h1>
+				<p class="intro">Este es mi espacio personal. Un lugar para compartir lo que aprendo, lo que me mueve y todo aquello que sucede por el camino.</p>
+				<div class="hero-actions"><a class="primary" href="/blog">Leer el blog</a><a class="secondary" href="/about">Conóceme</a></div>
+			</section>
+			<section class="bio" aria-label="Bio de José">
+				<p>👨‍💻 <strong>Dev lead</strong></p>
+				<p>🏋🏻 Gym por salud mental</p>
+				<p>👣 Bailarín en <a href="https://www.instagram.com/latinmove/" target="_blank" rel="noreferrer">@latinmove</a></p>
+				<p>🫴🏻 Lo que sucede procede</p>
+			</section>
+			{latestPost && (
+				<section class="latest" aria-labelledby="latest-title">
+					<div class="section-heading">
+						<div><p class="eyebrow">Última publicación</p><h2 id="latest-title">Recién salido del blog</h2></div>
+						<a href="/blog">Ver todos los posts →</a>
+					</div>
+					<a class="latest-card" href={`/blog/${latestPost.id}/`}>
+						{latestPost.data.heroImage && <Image src={latestPost.data.heroImage} alt="" width={640} height={640} />}
+						<div class="latest-copy">
+							<p class="post-date"><FormattedDate date={latestPost.data.pubDate} /></p>
+							<h3>{latestPost.data.title}</h3>
+							<p>{latestPost.data.description}</p>
+							<span>Leer publicación →</span>
+						</div>
+					</a>
+				</section>
+			)}
+		</main>
+		<Footer />
+	</body>
+</html>
+<style>
+	.home { width:1080px; min-height:72vh; display:grid; grid-template-columns:1.5fr 1fr; gap:5rem; align-items:center; }
+	.eyebrow { color:var(--accent); font-weight:700; letter-spacing:.12em; text-transform:uppercase; font-size:.78rem; }
+	h1 { max-width:760px; font-size:clamp(3.6rem,9vw,7rem); letter-spacing:-.065em; line-height:.9; }
+	h1 span { color:var(--accent); }
+	.intro { max-width:650px; color:var(--muted); font-size:1.15rem; }
+	.hero-actions { display:flex; gap:1rem; margin-top:2rem; }
+	.hero-actions a { padding:.7rem 1.15rem; border-radius:999px; text-decoration:none; font-weight:700; }
+	.primary { color:white; background:var(--accent); }
+	.secondary { color:var(--text); border:1px solid var(--border); }
+	.bio { padding:2rem; background:var(--surface); border:1px solid var(--border); border-radius:24px; box-shadow:var(--box-shadow); transform:rotate(1deg); }
+	.bio p { margin:.75rem 0; }
+	.latest { grid-column:1/-1; padding-top:5rem; }
+	.latest-card { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); overflow:hidden; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:24px; text-decoration:none; transition:transform .25s ease, box-shadow .25s ease; }
+	.latest-card:hover { color:var(--text); transform:translateY(-4px); box-shadow:var(--box-shadow); }
+	.latest-card :global(img) { width:100%; aspect-ratio:1; object-fit:cover; object-position:center top; border-radius:0; }
+	.latest-copy { display:flex; padding:clamp(1.5rem,4vw,3.5rem); flex-direction:column; justify-content:center; }
+	.latest-copy h3 { margin:.25rem 0 1rem; font-size:clamp(2rem,4vw,3.4rem); letter-spacing:-.045em; }
+	.latest-copy>p:not(.post-date) { color:var(--muted); }
+	.latest-copy span { margin-top:1rem; color:var(--accent); font-weight:700; }
+	.post-date { margin:0; color:var(--muted); font-size:.8rem; text-transform:uppercase; letter-spacing:.1em; }
+	.section-heading { display:flex; align-items:end; justify-content:space-between; gap:1rem; margin-bottom:1.5rem; }
+	.section-heading .eyebrow { margin-bottom:.35rem; }
+	.section-heading h2 { margin:0; font-size:clamp(2rem,5vw,3.4rem); letter-spacing:-.04em; }
+	.section-heading a { color:var(--text); font-weight:700; text-decoration:none; white-space:nowrap; }
+	.section-heading a:hover { color:var(--accent); }
+	@media (max-width:800px) { .home { grid-template-columns:1fr; gap:2rem; padding-top:3rem; } .bio { transform:none; } .latest-card { grid-template-columns:1fr; } }
+</style>

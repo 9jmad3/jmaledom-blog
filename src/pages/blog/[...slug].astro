@@ -1,0 +1,41 @@
+---
+import { type CollectionEntry, getCollection, render } from 'astro:content';
+import BlogPost from '../../layouts/BlogPost.astro';
+
+export async function getStaticPaths() {
+	const posts = (await getCollection('blog')).sort(
+		(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+	);
+	return posts.map((post, index) => ({
+		params: { slug: post.id },
+		props: {
+			post,
+			newerPost: posts[index - 1],
+			olderPost: posts[index + 1],
+		},
+	}));
+}
+type Props = {
+	post: CollectionEntry<'blog'>;
+	newerPost?: CollectionEntry<'blog'>;
+	olderPost?: CollectionEntry<'blog'>;
+};
+
+const { post, newerPost, olderPost } = Astro.props;
+const { Content } = await render(post);
+const plainText = post.body
+	.replace(/<[^>]*>/g, ' ')
+	.replace(/https?:\/\/\S+/g, ' ')
+	.replace(/[#*_`>\[\](){}|-]/g, ' ');
+const wordCount = plainText.trim().split(/\s+/).filter(Boolean).length;
+const readingMinutes = Math.max(1, Math.ceil(wordCount / 200));
+---
+
+<BlogPost
+	{...post.data}
+	{readingMinutes}
+	newerPost={newerPost && { id: newerPost.id, title: newerPost.data.title }}
+	olderPost={olderPost && { id: olderPost.id, title: olderPost.data.title }}
+>
+	<Content />
+</BlogPost>

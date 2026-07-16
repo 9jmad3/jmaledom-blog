@@ -1,0 +1,19 @@
+<button class="theme-toggle" type="button" aria-label="Cambiar tema" title="Cambiar tema">
+	<span class="sun" aria-hidden="true">☀</span><span class="moon" aria-hidden="true">☾</span>
+</button>
+<script is:inline>
+	const root = document.documentElement;
+	const saved = localStorage.getItem('theme');
+	root.dataset.theme = saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+	document.querySelector('.theme-toggle')?.addEventListener('click', () => {
+		root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+		localStorage.setItem('theme', root.dataset.theme);
+	});
+</script>
+<style>
+	.theme-toggle { display:grid; width:2.4rem; height:2.4rem; padding:0; place-items:center; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:999px; cursor:pointer; }
+	.theme-toggle:hover { border-color:var(--accent); }
+	.sun,.moon { grid-area:1/1; line-height:1; }
+	.moon,:global([data-theme='dark']) .sun { display:none; }
+	:global([data-theme='dark']) .moon { display:block; }
+</style>

@@ -1,0 +1,14 @@
+---
+import { AUTHOR_NAME, INSTAGRAM_URL } from '../consts';
+const today = new Date();
+---
+<footer>
+	<span>&copy; {today.getFullYear()} {AUTHOR_NAME} · jmaledom</span>
+	<div class="social-links"><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a></div>
+</footer>
+<style>
+	footer { padding:2.5em 1em 4em; color:var(--muted); text-align:center; border-top:1px solid var(--border); }
+	.social-links { display:flex; justify-content:center; gap:1.25em; margin-top:.6em; }
+	.social-links a { color:var(--muted); text-decoration:none; font-weight:700; }
+	.social-links a:hover { color:var(--accent); }
+</style>

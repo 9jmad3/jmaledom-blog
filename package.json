@@ -1,0 +1,27 @@
+{
+  "name": "jmaledom-blog",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Blog personal de jmaledom construido con Astro",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/9jmad3/jmaledom-blog.git"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^7.0.3",
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.3",
+    "astro": "^7.0.9",
+    "sharp": "^0.35.0"
+  }
+}

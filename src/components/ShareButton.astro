@@ -1,0 +1,98 @@
+---
+interface Props {
+	title: string;
+	description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<div class="share" data-share-root data-title={title} data-description={description}>
+	<div>
+		<p>¿Te ha hecho pensar?</p>
+		<span>Compártelo con alguien a quien también pueda interesarle.</span>
+	</div>
+	<button type="button" data-share-button>
+		<svg viewBox="0 0 24 24" aria-hidden="true">
+			<circle cx="18" cy="5" r="3"></circle>
+			<circle cx="6" cy="12" r="3"></circle>
+			<circle cx="18" cy="19" r="3"></circle>
+			<path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"></path>
+		</svg>
+		<span data-share-label>Compartir artículo</span>
+	</button>
+	<p class="status" data-share-status aria-live="polite"></p>
+</div>
+
+<script>
+	const shareRoot = document.querySelector<HTMLElement>('[data-share-root]');
+	const shareButton = shareRoot?.querySelector<HTMLButtonElement>('[data-share-button]');
+	const shareLabel = shareRoot?.querySelector<HTMLElement>('[data-share-label]');
+	const shareStatus = shareRoot?.querySelector<HTMLElement>('[data-share-status]');
+
+	shareButton?.addEventListener('click', async () => {
+		if (!shareRoot || !shareLabel || !shareStatus) return;
+
+		const shareData = {
+			title: shareRoot.dataset.title ?? document.title,
+			text: shareRoot.dataset.description ?? '',
+			url: window.location.href,
+		};
+
+		try {
+			if (navigator.share) {
+				await navigator.share(shareData);
+				shareStatus.textContent = 'Artículo compartido.';
+				return;
+			}
+
+			await navigator.clipboard.writeText(shareData.url);
+			shareLabel.textContent = 'Enlace copiado';
+			shareStatus.textContent = 'El enlace se ha copiado al portapapeles.';
+			window.setTimeout(() => {
+				shareLabel.textContent = 'Compartir artículo';
+			}, 2500);
+		} catch (error) {
+			if (error instanceof DOMException && error.name === 'AbortError') return;
+			shareStatus.textContent = 'No se ha podido compartir. Copia el enlace desde el navegador.';
+		}
+	});
+</script>
+
+<style>
+	.share {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1.5rem;
+		margin: 3.5rem 0 1rem;
+		padding: 1.4rem;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 18px;
+	}
+	.share p { margin: 0; color: var(--text); font-weight: 700; }
+	.share span { color: var(--muted); font-size: .9rem; }
+	.share button {
+		display: inline-flex;
+		align-items: center;
+		gap: .55rem;
+		flex: 0 0 auto;
+		padding: .7rem 1rem;
+		color: white;
+		background: var(--accent);
+		border: 0;
+		border-radius: 999px;
+		font: inherit;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.share button span { color: inherit; font-size: .9rem; }
+	.share svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+	.status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+	@media (max-width: 600px) {
+		.share { align-items: stretch; flex-direction: column; }
+		.share button { justify-content: center; }
+	}
+</style>
