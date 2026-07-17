@@ -37,7 +37,7 @@ Railway detecta y compila automáticamente este proyecto como un sitio estático
 1. Crea un proyecto en Railway.
 2. Selecciona **Deploy from GitHub repo** y elige este repositorio.
 3. En **Settings → Networking**, pulsa **Generate Domain**.
-4. Añade la variable `SITE_URL` con la URL pública completa: `https://jmaledom-blog-production.up.railway.app`.
+4. Añade la variable `SITE_URL` con la URL pública completa: `https://www.jmaledom.es`.
 5. Vuelve a desplegar para generar los enlaces canónicos, el sitemap y las imágenes sociales con el dominio correcto.
 
 No es necesario configurar manualmente los comandos de build o start.
@@ -46,7 +46,7 @@ No es necesario configurar manualmente los comandos de build o start.
 
 El blog incluye soporte para [Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/), sin cookies y desactivado durante el desarrollo local.
 
-1. En Cloudflare Web Analytics, añade `jmaledom-blog-production.up.railway.app` como sitio sin proxy.
+1. En Cloudflare Web Analytics, añade `www.jmaledom.es` como sitio sin proxy.
 2. Copia el token que aparece en el snippet de JavaScript.
 3. En Railway, añade `PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN` con ese token.
 4. Vuelve a desplegar el servicio.

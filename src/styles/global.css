@@ -80,6 +80,11 @@ a {
 a:hover {
 	color: var(--accent);
 }
+a:focus-visible,
+button:focus-visible {
+	outline: 3px solid var(--accent);
+	outline-offset: 4px;
+}
 p {
 	margin-bottom: 1em;
 }

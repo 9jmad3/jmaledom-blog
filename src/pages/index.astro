@@ -36,7 +36,7 @@ const [latestPost] = (await getCollection('blog')).sort(
 						<a href="/blog">Ver todos los posts →</a>
 					</div>
 					<a class="latest-card" href={`/blog/${latestPost.id}/`}>
-						{latestPost.data.heroImage && <Image src={latestPost.data.heroImage} alt="" width={640} height={640} />}
+						{latestPost.data.heroImage && <Image src={latestPost.data.heroImage} alt={`Portada de «${latestPost.data.title}»`} width={640} height={640} />}
 						<div class="latest-copy">
 							<p class="post-date"><FormattedDate date={latestPost.data.pubDate} /></p>
 							<h3>{latestPost.data.title}</h3>

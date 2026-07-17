@@ -110,7 +110,7 @@ const posts = (await getCollection('blog')).sort(
 							<li class:list={{ featured: index === 0 }}>
 								<a class="post-card" href={`/blog/${post.id}/`}>
 									{post.data.heroImage && (
-										<div class="post-image"><Image width={720} height={720} src={post.data.heroImage} alt="" /></div>
+										<div class="post-image"><Image width={720} height={720} src={post.data.heroImage} alt={`Portada de «${post.data.title}»`} /></div>
 									)}
 									<div class="post-copy">
 										<p class="date"><FormattedDate date={post.data.pubDate} /></p>

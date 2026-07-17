@@ -5,9 +5,13 @@
 	const root = document.documentElement;
 	const saved = localStorage.getItem('theme');
 	root.dataset.theme = saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-	document.querySelector('.theme-toggle')?.addEventListener('click', () => {
+	const button = document.querySelector('.theme-toggle');
+	const updateLabel = () => button?.setAttribute('aria-label', root.dataset.theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
+	updateLabel();
+	button?.addEventListener('click', () => {
 		root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
 		localStorage.setItem('theme', root.dataset.theme);
+		updateLabel();
 	});
 </script>
 <style>
