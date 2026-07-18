@@ -132,7 +132,11 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 					remove.textContent = 'Eliminando…';
 					deletionStatus.textContent = '';
 					try {
-						const response = await fetch(`/api/comments/${comment.id}`, { method: 'DELETE' });
+						const response = await fetch(`/api/comments/${comment.id}`, {
+							method: 'DELETE',
+							headers: { 'Content-Type': 'application/json' },
+							body: '{}',
+						});
 						const result = await response.json().catch(() => ({}));
 						if (!response.ok) {
 							const diagnostic = result.diagnosticId ? ` [${result.diagnosticId}]` : '';
