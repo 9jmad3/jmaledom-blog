@@ -5,14 +5,24 @@ import ThemeToggle from './ThemeToggle.astro';
 ---
 <header><nav>
 	<h2><a href="/" aria-label="Ir al inicio"><span>jm</span>{SITE_TITLE.slice(2)}</a></h2>
-	<div class="internal-links"><HeaderLink href="/">Inicio</HeaderLink><HeaderLink href="/blog">Blog</HeaderLink><HeaderLink href="/about">Sobre mí</HeaderLink></div>
+	<div class="internal-links"><HeaderLink href="/">Inicio</HeaderLink><HeaderLink href="/blog">Blog</HeaderLink><HeaderLink href="/about">Sobre mí</HeaderLink><a href="/comentarios/" data-moderation-link hidden>Moderación</a></div>
 	<ThemeToggle />
 </nav></header>
+<script>
+	const moderationLink = document.querySelector<HTMLElement>('[data-moderation-link]');
+	if (moderationLink) {
+		fetch('/api/comments/admin-session')
+			.then((response) => response.ok ? response.json() : null)
+			.then((session) => { moderationLink.hidden = !session?.isAdmin; })
+			.catch(() => { moderationLink.hidden = true; });
+	}
+</script>
 <style>
 	header { position:fixed; top:0; left:0; z-index:10; width:100%; box-sizing:border-box; margin:0; padding:0 1em; background:color-mix(in srgb,var(--background) 90%,transparent); border-bottom:1px solid var(--border); backdrop-filter:blur(14px); }
 	nav { display:flex; align-items:center; justify-content:space-between; max-width:1120px; margin:auto; }
 	h2 { margin:0; font-size:1em; } h2 a,h2 a.active { text-decoration:none; } h2 span { color:var(--accent); }
 	nav a { padding:1em .5em; color:var(--text); border-bottom:3px solid transparent; text-decoration:none; }
 	nav a.active { border-bottom-color:var(--accent); }
+	[hidden] { display:none !important; }
 	@media (max-width:720px) { header{padding:0 .5rem} nav a{padding-inline:.35rem} h2{display:none} }
 </style>
