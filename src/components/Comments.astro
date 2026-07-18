@@ -113,6 +113,9 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 			identity.append(meta);
 			header.append(identity);
 			if (comment.canDelete) {
+				const deletionStatus = document.createElement('p');
+				deletionStatus.className = 'comment-deletion-status';
+				deletionStatus.setAttribute('role', 'status');
 				const remove = document.createElement('button');
 				remove.type = 'button';
 				remove.className = 'delete-comment';
@@ -127,6 +130,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 					}
 					remove.disabled = true;
 					remove.textContent = 'Eliminando…';
+					deletionStatus.textContent = '';
 					try {
 						const response = await fetch(`/api/comments/${comment.id}`, { method: 'DELETE' });
 						const result = await response.json().catch(() => ({}));
@@ -143,14 +147,17 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 						remove.textContent = 'Eliminar';
 						remove.classList.remove('is-confirming');
 						confirming = false;
-						message.textContent = error instanceof Error ? error.message : 'No se ha podido eliminar.';
+						deletionStatus.textContent = error instanceof Error ? error.message : 'No se ha podido eliminar.';
 					}
 				});
 				header.append(remove);
+				item.append(header, deletionStatus);
+			} else {
+				item.append(header);
 			}
 			const body = document.createElement('p');
 			body.textContent = comment.body;
-			item.append(header, body);
+			item.append(body);
 			return item;
 		}
 
@@ -260,6 +267,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 	.comments :global(.delete-comment) { flex: 0 0 auto; padding: .35rem .65rem; color: rgb(var(--gray)); background: transparent; border: 1px solid var(--border); border-radius: 999px; font: inherit; font-size: .78rem; cursor: pointer; }
 	.comments :global(.delete-comment:hover) { color: var(--accent); border-color: var(--accent); }
 	.comments :global(.delete-comment.is-confirming) { color: white; background: var(--accent); border-color: var(--accent); }
+	.comments :global(.comment-deletion-status) { margin: .45rem 0 0; color: var(--accent); font-size: .85rem; }
 	[hidden] { display: none !important; }
 	@media (max-width: 600px) {
 		.comments-heading, .form-footer { align-items: stretch; flex-direction: column; }
