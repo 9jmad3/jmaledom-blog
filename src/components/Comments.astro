@@ -117,10 +117,34 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 				remove.type = 'button';
 				remove.className = 'delete-comment';
 				remove.textContent = 'Eliminar';
+				let confirming = false;
 				remove.addEventListener('click', async () => {
-					if (!confirm('¿Quieres eliminar este comentario?')) return;
-					const response = await fetch(`/api/comments/${comment.id}`, { method: 'DELETE' });
-					if (response.ok) item.remove();
+					if (!confirming) {
+						confirming = true;
+						remove.textContent = 'Confirmar eliminación';
+						remove.classList.add('is-confirming');
+						return;
+					}
+					remove.disabled = true;
+					remove.textContent = 'Eliminando…';
+					try {
+						const response = await fetch(`/api/comments/${comment.id}`, { method: 'DELETE' });
+						const result = await response.json().catch(() => ({}));
+						if (!response.ok) throw new Error(result.error ?? 'No se ha podido eliminar.');
+						item.remove();
+						const remaining = list.querySelectorAll('.comment').length;
+						count.textContent = remaining ? `(${remaining})` : '';
+						if (!remaining) {
+							loading.hidden = false;
+							loading.textContent = 'Sé la primera persona en comentar.';
+						}
+					} catch (error) {
+						remove.disabled = false;
+						remove.textContent = 'Eliminar';
+						remove.classList.remove('is-confirming');
+						confirming = false;
+						message.textContent = error instanceof Error ? error.message : 'No se ha podido eliminar.';
+					}
 				});
 				header.append(remove);
 			}
@@ -235,6 +259,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 	.comments :global(.comment > p) { margin: .85rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 	.comments :global(.delete-comment) { flex: 0 0 auto; padding: .35rem .65rem; color: rgb(var(--gray)); background: transparent; border: 1px solid var(--border); border-radius: 999px; font: inherit; font-size: .78rem; cursor: pointer; }
 	.comments :global(.delete-comment:hover) { color: var(--accent); border-color: var(--accent); }
+	.comments :global(.delete-comment.is-confirming) { color: white; background: var(--accent); border-color: var(--accent); }
 	[hidden] { display: none !important; }
 	@media (max-width: 600px) {
 		.comments-heading, .form-footer { align-items: stretch; flex-direction: column; }
