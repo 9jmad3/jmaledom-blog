@@ -64,7 +64,10 @@ export const POST: APIRoute = async (context) => {
 		 WHERE ip_hash = $1 AND created_at > now() - interval '10 minutes'`,
 		[ipHash],
 	);
-	if (recent.rows[0].count >= 3) return json({ error: 'Has enviado varios comentarios. Espera unos minutos.' }, 429);
+	const rateLimit = process.env.SITE_ENVIRONMENT === 'staging' ? 50 : viewer ? 10 : 5;
+	if (!isAdmin(viewer?.email) && recent.rows[0].count >= rateLimit) {
+		return json({ error: 'Has enviado varios comentarios. Espera unos minutos.' }, 429);
+	}
 
 	const moderation = moderateComment(body);
 	if (moderation.status === 'rejected') return json({ error: 'El comentario parece spam y no se ha publicado.' }, 400);
