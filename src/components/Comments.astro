@@ -224,15 +224,17 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 	.form-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 	.form-message { min-height: 1.5rem; margin: .75rem 0 0; color: rgb(var(--gray)); }
 	.comment-list { display: grid; gap: 1rem; }
-	.comment { padding: 1rem 0; border-bottom: 1px solid var(--border); }
-	.comment header, .comment-identity { display: flex; align-items: center; }
-	.comment header { justify-content: space-between; gap: 1rem; }
-	.comment-identity { gap: .75rem; }
-	.comment-identity img { border-radius: 50%; }
-	.comment-identity div { display: flex; flex-direction: column; }
-	.comment time { color: rgb(var(--gray)); font-size: .8rem; }
-	.comment > p { margin: .75rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-	.delete-comment { color: rgb(var(--gray)); background: transparent; border: 0; cursor: pointer; text-decoration: underline; }
+	.comments :global(.comment) { padding: 1.1rem 0; border-bottom: 1px solid var(--border); }
+	.comments :global(.comment header), .comments :global(.comment-identity) { display: flex; align-items: center; }
+	.comments :global(.comment header) { justify-content: space-between; gap: 1rem; }
+	.comments :global(.comment-identity) { min-width: 0; gap: .75rem; }
+	.comments :global(.comment-identity img) { flex: 0 0 auto; border-radius: 50%; object-fit: cover; }
+	.comments :global(.comment-identity div) { display: flex; min-width: 0; flex-direction: column; }
+	.comments :global(.comment-identity strong) { line-height: 1.25; overflow-wrap: anywhere; }
+	.comments :global(.comment time) { color: rgb(var(--gray)); font-size: .8rem; line-height: 1.4; }
+	.comments :global(.comment > p) { margin: .85rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+	.comments :global(.delete-comment) { flex: 0 0 auto; padding: .35rem .65rem; color: rgb(var(--gray)); background: transparent; border: 1px solid var(--border); border-radius: 999px; font: inherit; font-size: .78rem; cursor: pointer; }
+	.comments :global(.delete-comment:hover) { color: var(--accent); border-color: var(--accent); }
 	[hidden] { display: none !important; }
 	@media (max-width: 600px) {
 		.comments-heading, .form-footer { align-items: stretch; flex-direction: column; }
