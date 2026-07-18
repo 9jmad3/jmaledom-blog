@@ -1,0 +1,351 @@
+---
+interface Props {
+	article: string;
+}
+
+const { article } = Astro.props;
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+---
+
+<section class="comments" data-comments data-article={article} data-turnstile-key={turnstileSiteKey} aria-labelledby="comments-title">
+	<div class="comments-heading">
+		<div>
+			<p class="eyebrow">Conversación</p>
+			<h2 id="comments-title">Comentarios <span data-comment-count></span></h2>
+		</div>
+		<button class="primary-button" type="button" data-start-comment>Dejar un comentario</button>
+	</div>
+
+	<div class="comment-choice" data-comment-choice hidden>
+		<h3>¿Cómo quieres comentar?</h3>
+		<div class="choice-grid">
+			<button type="button" class="choice-card" data-guest-choice>
+				<strong>Como invitado</strong>
+				<span>Solo necesitas indicar un nombre. Después no podrás eliminarlo.</span>
+			</button>
+			<button type="button" class="choice-card google-choice" data-google-choice>
+				<strong>Continuar con Google</strong>
+				<span>Podrás eliminar tus comentarios cuando quieras.</span>
+			</button>
+		</div>
+	</div>
+
+	<form class="comment-form" data-comment-form hidden>
+		<label data-name-field>
+			<span data-name-label>Nombre</span>
+			<input name="name" type="text" minlength="2" maxlength="60" autocomplete="name" />
+		</label>
+		<label class="avatar-preference" data-avatar-field hidden>
+			<input name="showAvatar" type="checkbox" />
+			<span>Mostrar mi foto de Google</span>
+		</label>
+		<label class="honeypot" aria-hidden="true">
+			<span>Web</span>
+			<input name="website" type="text" tabindex="-1" autocomplete="off" />
+		</label>
+		<label>
+			<span>Comentario</span>
+			<textarea name="body" rows="5" minlength="2" maxlength="1500" required></textarea>
+		</label>
+		<p class="privacy-note">Si continúas con Google, tu correo nunca se mostrará públicamente. <a href="/privacidad/">Más información</a>.</p>
+		<div class="form-footer">
+			<small><span data-character-count>0</span>/1500</small>
+			<div class="cf-turnstile" data-turnstile-container data-sitekey={turnstileSiteKey}></div>
+			<button class="primary-button" type="submit" data-submit-comment>Publicar comentario</button>
+		</div>
+		<p class="form-message" data-form-message role="status"></p>
+	</form>
+
+	<p class="comments-loading" data-comments-loading>Cargando comentarios…</p>
+	<div class="comment-list" data-comment-list></div>
+	<p class="comments-status" data-comments-status role="status"></p>
+</section>
+
+{turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
+
+<script>
+	import { authClient } from '../lib/auth-client';
+
+	type Viewer = { name: string; image?: string | null } | null;
+	type PublicComment = {
+		id: string;
+		authorName: string;
+		authorImage?: string | null;
+		body: string;
+		createdAt: string;
+		registered: boolean;
+		canDelete: boolean;
+		isAuthor: boolean;
+	};
+
+	const root = document.querySelector<HTMLElement>('[data-comments]');
+	if (root) {
+		const article = root.dataset.article ?? '';
+		const siteKey = root.dataset.turnstileKey ?? '';
+		const list = root.querySelector<HTMLElement>('[data-comment-list]')!;
+		const loading = root.querySelector<HTMLElement>('[data-comments-loading]')!;
+		const count = root.querySelector<HTMLElement>('[data-comment-count]')!;
+		const choice = root.querySelector<HTMLElement>('[data-comment-choice]')!;
+		const form = root.querySelector<HTMLFormElement>('[data-comment-form]')!;
+		const nameField = root.querySelector<HTMLElement>('[data-name-field]')!;
+		const nameLabel = root.querySelector<HTMLElement>('[data-name-label]')!;
+		const avatarField = root.querySelector<HTMLElement>('[data-avatar-field]')!;
+		const nameInput = form.elements.namedItem('name') as HTMLInputElement;
+		const avatarInput = form.elements.namedItem('showAvatar') as HTMLInputElement;
+		const message = root.querySelector<HTMLElement>('[data-form-message]')!;
+		const statusMessage = root.querySelector<HTMLElement>('[data-comments-status]')!;
+		const textarea = form.elements.namedItem('body') as HTMLTextAreaElement;
+		const submitButton = root.querySelector<HTMLButtonElement>('[data-submit-comment]')!;
+		let viewer: Viewer = null;
+
+		const formatDate = (value: string) =>
+			new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+
+		function renderComment(comment: PublicComment) {
+			const item = document.createElement('article');
+			item.className = 'comment';
+			const header = document.createElement('header');
+			const identity = document.createElement('div');
+			identity.className = 'comment-identity';
+			if (comment.authorImage) {
+				const avatar = document.createElement('img');
+				avatar.src = comment.authorImage;
+				avatar.alt = '';
+				avatar.width = 38;
+				avatar.height = 38;
+				avatar.referrerPolicy = 'no-referrer';
+				identity.append(avatar);
+			}
+			const meta = document.createElement('div');
+			const author = document.createElement('strong');
+			author.textContent = comment.authorName;
+			const authorLine = document.createElement('span');
+			authorLine.className = 'comment-author-line';
+			authorLine.append(author);
+			if (comment.isAuthor) {
+				const badge = document.createElement('span');
+				badge.className = 'author-badge';
+				badge.textContent = 'Autor';
+				badge.title = 'Autor del blog';
+				authorLine.append(badge);
+			}
+			const date = document.createElement('time');
+			date.dateTime = comment.createdAt;
+			date.textContent = formatDate(comment.createdAt);
+			meta.append(authorLine, date);
+			identity.append(meta);
+			header.append(identity);
+			if (comment.canDelete) {
+				const deletionStatus = document.createElement('p');
+				deletionStatus.className = 'comment-deletion-status';
+				deletionStatus.setAttribute('role', 'status');
+				const remove = document.createElement('button');
+				remove.type = 'button';
+				remove.className = 'delete-comment';
+				remove.textContent = 'Eliminar';
+				let confirming = false;
+				remove.addEventListener('click', async () => {
+					if (!confirming) {
+						confirming = true;
+						remove.textContent = 'Confirmar eliminación';
+						remove.classList.add('is-confirming');
+						return;
+					}
+					remove.disabled = true;
+					remove.textContent = 'Eliminando…';
+					deletionStatus.textContent = '';
+					try {
+						const response = await fetch(`/api/comments/${comment.id}`, {
+							method: 'DELETE',
+							headers: { 'Content-Type': 'application/json' },
+							body: '{}',
+						});
+						const result = await response.json().catch(() => ({}));
+						if (!response.ok) {
+							throw new Error(result.error ?? 'No se ha podido eliminar.');
+						}
+						item.remove();
+						const remaining = list.querySelectorAll('.comment').length;
+						count.textContent = remaining ? `(${remaining})` : '';
+						if (!remaining) {
+							loading.hidden = false;
+							loading.textContent = 'Sé la primera persona en comentar.';
+						}
+					} catch (error) {
+						remove.disabled = false;
+						remove.textContent = 'Eliminar';
+						remove.classList.remove('is-confirming');
+						confirming = false;
+						deletionStatus.textContent = error instanceof Error ? error.message : 'No se ha podido eliminar.';
+					}
+				});
+				header.append(remove);
+				item.append(header, deletionStatus);
+			} else {
+				item.append(header);
+			}
+			const body = document.createElement('p');
+			body.textContent = comment.body;
+			item.append(body);
+			return item;
+		}
+
+		async function loadComments() {
+			try {
+				const response = await fetch(`/api/comments?article=${encodeURIComponent(article)}`);
+				if (!response.ok) throw new Error();
+				const data = (await response.json()) as { comments: PublicComment[]; viewer: Viewer };
+				viewer = data.viewer;
+				list.replaceChildren(...data.comments.map(renderComment));
+				count.textContent = data.comments.length ? `(${data.comments.length})` : '';
+				if (!data.comments.length) loading.textContent = 'Sé la primera persona en comentar.';
+				else loading.hidden = true;
+			} catch {
+				loading.textContent = 'No se han podido cargar los comentarios.';
+			}
+		}
+
+		function openForm(asGuest: boolean) {
+			choice.hidden = true;
+			form.hidden = false;
+			nameField.hidden = false;
+			nameLabel.textContent = asGuest ? 'Nombre' : 'Nombre visible';
+			nameInput.required = true;
+			if (!asGuest && viewer) {
+				const suggestedName = viewer.name.trim().split(/\s+/)[0] || 'Usuario';
+				nameInput.value = localStorage.getItem('comment-display-name') ?? suggestedName;
+				avatarField.hidden = !viewer.image;
+				avatarInput.checked = localStorage.getItem('comment-show-avatar') === 'true';
+			} else {
+				avatarField.hidden = true;
+				avatarInput.checked = false;
+			}
+			textarea.focus();
+		}
+
+		root.querySelector('[data-start-comment]')?.addEventListener('click', () => {
+			statusMessage.textContent = '';
+			message.textContent = '';
+			if (viewer) openForm(false);
+			else choice.hidden = false;
+		});
+		root.querySelector('[data-guest-choice]')?.addEventListener('click', () => openForm(true));
+		root.querySelector('[data-google-choice]')?.addEventListener('click', async () => {
+			await authClient.signIn.social({ provider: 'google', callbackURL: window.location.href });
+		});
+		textarea.addEventListener('input', () => {
+			root.querySelector<HTMLElement>('[data-character-count]')!.textContent = String(textarea.value.length);
+		});
+
+		form.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			const formData = new FormData(form);
+			const turnstileToken = formData.get('cf-turnstile-response') ?? '';
+			if (siteKey && !turnstileToken) {
+				message.textContent = 'Completa la comprobación de seguridad.';
+				return;
+			}
+			submitButton.disabled = true;
+			submitButton.textContent = 'Publicando…';
+			message.textContent = 'Enviando tu comentario…';
+			let response: Response;
+			let data: { error?: string; pending: boolean; comment: PublicComment };
+			try {
+				response = await fetch('/api/comments', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						article,
+						name: formData.get('name'),
+						body: formData.get('body'),
+						showAvatar: formData.get('showAvatar') === 'on',
+						website: formData.get('website'),
+						turnstileToken,
+					}),
+				});
+				data = await response.json();
+			} catch {
+				message.textContent = 'No se ha podido conectar. Inténtalo de nuevo.';
+				submitButton.disabled = false;
+				submitButton.textContent = 'Publicar comentario';
+				return;
+			}
+			if (!response.ok) {
+				message.textContent = data.error ?? 'No se ha podido publicar.';
+				submitButton.disabled = false;
+				submitButton.textContent = 'Publicar comentario';
+				return;
+			}
+			let publishedComment: HTMLElement | null = null;
+			if (data.pending) statusMessage.textContent = 'El comentario ha quedado pendiente de revisión.';
+			else {
+				publishedComment = renderComment({ ...data.comment, registered: Boolean(viewer), canDelete: Boolean(viewer) });
+				list.append(publishedComment);
+				loading.hidden = true;
+				count.textContent = `(${list.querySelectorAll('.comment').length})`;
+				statusMessage.textContent = 'Comentario publicado.';
+			}
+			if (viewer) {
+				localStorage.setItem('comment-display-name', String(formData.get('name') ?? ''));
+				localStorage.setItem('comment-show-avatar', String(formData.get('showAvatar') === 'on'));
+			}
+			form.reset();
+			form.hidden = true;
+			submitButton.disabled = false;
+			submitButton.textContent = 'Publicar comentario';
+			message.textContent = '';
+			root.querySelector<HTMLElement>('[data-character-count]')!.textContent = '0';
+			(window as typeof window & { turnstile?: { reset: () => void } }).turnstile?.reset();
+			publishedComment?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		});
+
+		loadComments();
+	}
+</script>
+
+<style>
+	.comments { margin: 4rem 0 2rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+	.comments-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+	.comments-heading h2 { margin: 0; font-size: 1.7rem; }
+	.eyebrow { margin: 0 0 .25rem; color: var(--accent); font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+	.primary-button { padding: .75rem 1rem; color: white; background: var(--accent); border: 0; border-radius: 999px; font: inherit; font-weight: 700; cursor: pointer; }
+	.primary-button:disabled { cursor: wait; opacity: .65; }
+	.comment-choice, .comment-form { margin: 1.5rem 0; padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+	.comment-choice h3 { margin-top: 0; }
+	.choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+	.choice-card { display: flex; padding: 1rem; flex-direction: column; gap: .35rem; color: var(--text); text-align: left; background: transparent; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
+	.choice-card:hover { border-color: var(--accent); }
+	.choice-card span { color: rgb(var(--gray)); font-size: .9rem; }
+	.comment-form label { display: block; margin-bottom: 1rem; font-weight: 700; }
+	.comment-form input, .comment-form textarea { width: 100%; margin-top: .4rem; padding: .75rem; box-sizing: border-box; color: var(--text); background: var(--background); border: 1px solid var(--border); border-radius: 10px; font: inherit; }
+	.comment-form .avatar-preference { display: flex; align-items: center; gap: .6rem; font-weight: 400; }
+	.comment-form .avatar-preference input { width: auto; margin: 0; }
+	.comment-form textarea { resize: vertical; }
+	.privacy-note { margin: -.25rem 0 1rem; color: rgb(var(--gray)); font-size: .82rem; line-height: 1.5; }
+	.privacy-note a { color: inherit; text-underline-offset: .2em; }
+	.honeypot { position: absolute; left: -10000px; }
+	.form-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+	.form-message { min-height: 1.5rem; margin: .75rem 0 0; color: rgb(var(--gray)); }
+	.comments-status { min-height: 1.5rem; margin: 1rem 0 0; color: var(--accent); font-weight: 700; }
+	.comment-list { display: grid; gap: 1rem; }
+	.comments :global(.comment) { padding: 1.1rem 0; border-bottom: 1px solid var(--border); }
+	.comments :global(.comment header), .comments :global(.comment-identity) { display: flex; align-items: center; }
+	.comments :global(.comment header) { justify-content: space-between; gap: 1rem; }
+	.comments :global(.comment-identity) { min-width: 0; gap: .75rem; }
+	.comments :global(.comment-identity img) { flex: 0 0 auto; border-radius: 50%; object-fit: cover; }
+	.comments :global(.comment-identity div) { display: flex; min-width: 0; flex-direction: column; }
+	.comments :global(.comment-identity strong) { line-height: 1.25; overflow-wrap: anywhere; }
+	.comments :global(.comment-author-line) { display: flex; align-items: center; flex-direction: row; flex-wrap: wrap; gap: .45rem; }
+	.comments :global(.author-badge) { padding: .15rem .45rem; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 999px; font-size: .65rem; font-weight: 700; letter-spacing: .04em; line-height: 1.2; text-transform: uppercase; }
+	.comments :global(.comment time) { color: rgb(var(--gray)); font-size: .8rem; line-height: 1.4; }
+	.comments :global(.comment > p) { margin: .85rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+	.comments :global(.delete-comment) { flex: 0 0 auto; padding: .35rem .65rem; color: rgb(var(--gray)); background: transparent; border: 1px solid var(--border); border-radius: 999px; font: inherit; font-size: .78rem; cursor: pointer; }
+	.comments :global(.delete-comment:hover) { color: var(--accent); border-color: var(--accent); }
+	.comments :global(.delete-comment.is-confirming) { color: white; background: var(--accent); border-color: var(--accent); }
+	.comments :global(.comment-deletion-status) { margin: .45rem 0 0; color: var(--accent); font-size: .85rem; }
+	[hidden] { display: none !important; }
+	@media (max-width: 600px) {
+		.comments-heading, .form-footer { align-items: stretch; flex-direction: column; }
+		.choice-grid { grid-template-columns: 1fr; }
+	}
+</style>

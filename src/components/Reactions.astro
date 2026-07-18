@@ -1,0 +1,82 @@
+---
+interface Props { article: string; }
+const { article } = Astro.props;
+---
+
+<section class="reactions" data-reactions data-article={article} aria-labelledby="reactions-title">
+	<p id="reactions-title">¿Qué te ha dejado este artículo?</p>
+	<div class="reaction-options">
+		<button type="button" data-reaction="like" aria-pressed="false"><span aria-hidden="true">♥</span> Me gusta <strong data-count="like">0</strong></button>
+		<button type="button" data-reaction="think" aria-pressed="false"><span aria-hidden="true">💭</span> Me ha hecho pensar <strong data-count="think">0</strong></button>
+		<button type="button" data-reaction="relate" aria-pressed="false"><span aria-hidden="true">✨</span> Me representa <strong data-count="relate">0</strong></button>
+	</div>
+	<p class="reaction-status" data-reaction-status role="status"></p>
+</section>
+
+<script>
+	type Reaction = 'like' | 'think' | 'relate';
+	const root = document.querySelector<HTMLElement>('[data-reactions]');
+	if (root) {
+		const reactionsRoot = root;
+		const article = reactionsRoot.dataset.article ?? '';
+		const status = reactionsRoot.querySelector<HTMLElement>('[data-reaction-status]')!;
+		const buttons = [...reactionsRoot.querySelectorAll<HTMLButtonElement>('[data-reaction]')];
+		let selected: Reaction | null = null;
+		const storedVisitorId = localStorage.getItem('reaction-visitor-id');
+		const visitorId = storedVisitorId ?? crypto.randomUUID();
+		if (!storedVisitorId) {
+			localStorage.setItem('reaction-visitor-id', visitorId);
+		}
+
+		function render(totals: Record<Reaction, number>, active: Reaction | null) {
+			selected = active;
+			for (const button of buttons) {
+				const reaction = button.dataset.reaction as Reaction;
+				button.setAttribute('aria-pressed', String(reaction === active));
+				reactionsRoot.querySelector<HTMLElement>(`[data-count="${reaction}"]`)!.textContent = String(totals[reaction] ?? 0);
+			}
+		}
+
+		async function load() {
+			try {
+				const response = await fetch(`/api/reactions?article=${encodeURIComponent(article)}&visitor=${encodeURIComponent(visitorId)}`);
+				if (!response.ok) throw new Error();
+				const data = await response.json();
+				render(data.totals, data.selected);
+			} catch { status.textContent = 'No se han podido cargar las reacciones.'; }
+		}
+
+		for (const button of buttons) {
+			button.addEventListener('click', async () => {
+				const next = button.dataset.reaction as Reaction;
+				const reaction = selected === next ? null : next;
+				buttons.forEach((item) => item.disabled = true);
+				status.textContent = 'Guardando…';
+				try {
+					const response = await fetch('/api/reactions', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ article, reaction, visitorId }),
+					});
+					if (!response.ok) throw new Error();
+					await load();
+					status.textContent = reaction ? 'Reacción guardada.' : 'Reacción eliminada.';
+				} catch { status.textContent = 'No se ha podido guardar. Inténtalo de nuevo.'; }
+				finally { buttons.forEach((item) => item.disabled = false); }
+			});
+		}
+		load();
+	}
+</script>
+
+<style>
+	.reactions { margin: 3rem 0 1.25rem; padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+	.reactions > p:first-child { margin: 0 0 .85rem; font-weight: 700; }
+	.reaction-options { display: flex; flex-wrap: wrap; gap: .6rem; }
+	.reaction-options button { display: inline-flex; align-items: center; gap: .4rem; padding: .6rem .75rem; color: var(--text); background: var(--background); border: 1px solid var(--border); border-radius: 999px; font: inherit; font-size: .85rem; cursor: pointer; transition: border-color .2s ease, transform .2s ease; }
+	.reaction-options button:hover { border-color: var(--accent); transform: translateY(-1px); }
+	.reaction-options button[aria-pressed="true"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--background)); border-color: var(--accent); }
+	.reaction-options button:disabled { cursor: wait; opacity: .6; transform: none; }
+	.reaction-options strong { min-width: 1ch; font-size: .75rem; }
+	.reaction-status { min-height: 1.2em; margin: .65rem 0 0; color: rgb(var(--gray)); font-size: .78rem; }
+</style>

@@ -19,7 +19,7 @@ import { INSTAGRAM_URL } from '../consts';
 			<header>
 				<p class="eyebrow">Información</p>
 				<h1>Privacidad<span>.</span></h1>
-				<p class="intro">Este es un blog personal. No hay publicidad, cuentas de usuario ni formularios que recopilen tus datos.</p>
+				<p class="intro">Este es un blog personal sin publicidad. Solo se tratan los datos necesarios para la analítica y, si decides participar, para gestionar los comentarios.</p>
 			</header>
 
 			<section>
@@ -34,11 +34,24 @@ import { INSTAGRAM_URL } from '../consts';
 			</section>
 
 			<section>
+				<h2>Comentarios y acceso con Google</h2>
+				<p>Puedes comentar como invitado indicando un nombre, o acceder con Google para poder eliminar posteriormente tus propios comentarios. Si eliges Google, se guardan internamente el identificador de tu cuenta, nombre, correo y, cuando esté disponible, imagen de perfil. El correo y el nombre completo no se muestran públicamente.</p>
+				<p>Antes de publicar puedes elegir el nombre o apodo visible. La fotografía de Google no se publica salvo que actives expresamente esa opción.</p>
+				<p>Los comentarios se analizan automáticamente para reducir el spam y detectar contenido que deba revisarse antes de publicarse. Para proteger el formulario frente a bots se utiliza Cloudflare Turnstile. No se conserva tu dirección IP completa: se transforma en una huella no reversible utilizada temporalmente para limitar envíos abusivos.</p>
+			</section>
+
+			<section>
+				<h2>Reacciones a los artículos</h2>
+				<p>Puedes reaccionar a un artículo sin iniciar sesión. Para recordar tu elección, el navegador guarda un identificador aleatorio propio de esta web. En el servidor solo se conserva una huella no reversible de ese identificador junto con la reacción elegida.</p>
+				<p>Si has iniciado sesión con Google, la reacción se asocia internamente a tu cuenta para evitar duplicados. Las reacciones son privadas: únicamente se muestran sus totales.</p>
+			</section>
+
+			<section>
 				<h2>Contacto</h2>
 				<p>Si tienes alguna pregunta sobre la privacidad de esta web, puedes escribirme a través de <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a>.</p>
 			</section>
 
-			<p class="updated">Última actualización: 16 de julio de 2026.</p>
+			<p class="updated">Última actualización: 18 de julio de 2026.</p>
 		</main>
 		<Footer />
 	</body>

@@ -1,0 +1,116 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<BaseHead title="Moderación de comentarios · jmaledom" description="Panel privado de comentarios." />
+		<meta name="robots" content="noindex,nofollow" />
+	</head>
+	<body>
+		<Header />
+		<main class="moderation">
+			<h1>Comentarios pendientes</h1>
+			<div data-auth-actions>
+				<button type="button" data-admin-login>Entrar con Google</button>
+				<button type="button" data-admin-logout hidden>Cerrar sesión</button>
+			</div>
+			<p data-admin-message>Inicia sesión con la cuenta configurada como administradora.</p>
+			<div class="pending-list" data-pending-list></div>
+		</main>
+	</body>
+</html>
+
+<script>
+	import { authClient } from '../lib/auth-client';
+	const message = document.querySelector<HTMLElement>('[data-admin-message]')!;
+	const list = document.querySelector<HTMLElement>('[data-pending-list]')!;
+	const login = document.querySelector<HTMLButtonElement>('[data-admin-login]')!;
+	const logout = document.querySelector<HTMLButtonElement>('[data-admin-logout]')!;
+
+	login.addEventListener('click', () => authClient.signIn.social({ provider: 'google', callbackURL: window.location.href }));
+	logout.addEventListener('click', async () => { await authClient.signOut(); window.location.reload(); });
+
+	async function moderate(id: string, action: 'publish' | 'reject', item: HTMLElement) {
+		const buttons = item.querySelectorAll<HTMLButtonElement>('button');
+		buttons.forEach((button) => button.disabled = true);
+		const response = await fetch('/api/comments/moderation', {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ id, action }),
+		});
+		if (response.ok) {
+			item.remove();
+			if (!list.children.length) message.textContent = 'No hay comentarios pendientes.';
+		} else {
+			buttons.forEach((button) => button.disabled = false);
+			message.textContent = 'No se ha podido actualizar el comentario.';
+		}
+	}
+
+	async function load() {
+		const session = await authClient.getSession();
+		if (!session.data) return;
+		login.hidden = true;
+		logout.hidden = false;
+		const response = await fetch('/api/comments/moderation');
+		if (response.status === 403) { message.textContent = 'Esta cuenta no tiene permiso para moderar.'; return; }
+		if (!response.ok) { message.textContent = 'No se han podido cargar los comentarios.'; return; }
+		const data = await response.json();
+		message.textContent = data.comments.length ? '' : 'No hay comentarios pendientes.';
+		for (const comment of data.comments) {
+			const item = document.createElement('article');
+			item.className = 'pending-comment';
+			const title = document.createElement('strong');
+			title.textContent = comment.authorName;
+			const meta = document.createElement('div');
+			meta.className = 'pending-meta';
+			const article = document.createElement('a');
+			article.href = `/blog/${comment.articleSlug}/`;
+			article.textContent = comment.articleSlug;
+			article.target = '_blank';
+			const date = document.createElement('time');
+			date.dateTime = comment.createdAt;
+			date.textContent = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(comment.createdAt));
+			meta.append(article, date);
+			const body = document.createElement('p');
+			body.textContent = comment.body;
+			const actions = document.createElement('div');
+			actions.className = 'pending-actions';
+			const publish = document.createElement('button');
+			publish.className = 'publish-comment';
+			publish.textContent = 'Publicar';
+			publish.addEventListener('click', () => moderate(comment.id, 'publish', item));
+			const reject = document.createElement('button');
+			reject.className = 'reject-comment';
+			reject.textContent = 'Rechazar';
+			reject.addEventListener('click', () => moderate(comment.id, 'reject', item));
+			actions.append(publish, reject);
+			item.append(title, meta, body, actions);
+			list.append(item);
+		}
+	}
+	load();
+</script>
+
+<style>
+	.moderation { width: min(760px, calc(100% - 2rem)); padding-top: 4rem; padding-bottom: 5rem; }
+	.moderation h1 { font-size: clamp(2.5rem, 7vw, 5rem); }
+	[data-auth-actions] { display: flex; gap: .75rem; }
+	button { padding: .7rem 1rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; cursor: pointer; }
+	button:disabled { cursor: wait; opacity: .55; }
+	.pending-list { display: grid; gap: 1rem; margin-top: 2rem; }
+	.pending-list :global(.pending-comment) { padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 12px 30px rgb(0 0 0 / .04); }
+	.pending-list :global(.pending-comment > strong) { display: block; margin-bottom: .2rem; font-size: 1.1rem; }
+	.pending-list :global(.pending-meta) { display: flex; flex-wrap: wrap; gap: .35rem .75rem; color: rgb(var(--gray)); font-size: .8rem; }
+	.pending-list :global(.pending-meta a) { color: var(--accent); font-weight: 700; text-decoration: none; }
+	.pending-list :global(.pending-comment > p) { margin: 1.15rem 0; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+	.pending-list :global(.pending-actions) { display: flex; flex-wrap: wrap; gap: .6rem; }
+	.pending-list :global(.pending-actions button) { padding: .6rem .9rem; border-radius: 999px; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; }
+	.pending-list :global(.publish-comment) { color: white; background: var(--accent); border: 1px solid var(--accent); }
+	.pending-list :global(.reject-comment) { color: rgb(var(--gray)); background: transparent; border: 1px solid var(--border); }
+	.pending-list :global(.pending-actions button:disabled) { cursor: wait; opacity: .55; }
+	[hidden] { display: none !important; }
+</style>
