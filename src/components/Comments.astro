@@ -32,8 +32,12 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 	<form class="comment-form" data-comment-form hidden>
 		<label data-name-field>
-			<span>Nombre</span>
+			<span data-name-label>Nombre</span>
 			<input name="name" type="text" minlength="2" maxlength="60" autocomplete="name" />
+		</label>
+		<label class="avatar-preference" data-avatar-field hidden>
+			<input name="showAvatar" type="checkbox" />
+			<span>Mostrar mi foto de Google</span>
 		</label>
 		<label class="honeypot" aria-hidden="true">
 			<span>Web</span>
@@ -82,6 +86,10 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 		const choice = root.querySelector<HTMLElement>('[data-comment-choice]')!;
 		const form = root.querySelector<HTMLFormElement>('[data-comment-form]')!;
 		const nameField = root.querySelector<HTMLElement>('[data-name-field]')!;
+		const nameLabel = root.querySelector<HTMLElement>('[data-name-label]')!;
+		const avatarField = root.querySelector<HTMLElement>('[data-avatar-field]')!;
+		const nameInput = form.elements.namedItem('name') as HTMLInputElement;
+		const avatarInput = form.elements.namedItem('showAvatar') as HTMLInputElement;
 		const message = root.querySelector<HTMLElement>('[data-form-message]')!;
 		const statusMessage = root.querySelector<HTMLElement>('[data-comments-status]')!;
 		const textarea = form.elements.namedItem('body') as HTMLTextAreaElement;
@@ -191,8 +199,18 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 		function openForm(asGuest: boolean) {
 			choice.hidden = true;
 			form.hidden = false;
-			nameField.hidden = !asGuest;
-			(form.elements.namedItem('name') as HTMLInputElement).required = asGuest;
+			nameField.hidden = false;
+			nameLabel.textContent = asGuest ? 'Nombre' : 'Nombre visible';
+			nameInput.required = true;
+			if (!asGuest && viewer) {
+				const suggestedName = viewer.name.trim().split(/\s+/)[0] || 'Usuario';
+				nameInput.value = localStorage.getItem('comment-display-name') ?? suggestedName;
+				avatarField.hidden = !viewer.image;
+				avatarInput.checked = localStorage.getItem('comment-show-avatar') === 'true';
+			} else {
+				avatarField.hidden = true;
+				avatarInput.checked = false;
+			}
 			textarea.focus();
 		}
 
@@ -226,6 +244,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 					article,
 					name: formData.get('name'),
 					body: formData.get('body'),
+					showAvatar: formData.get('showAvatar') === 'on',
 					website: formData.get('website'),
 					turnstileToken,
 				}),
@@ -243,6 +262,10 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 				loading.hidden = true;
 				count.textContent = `(${list.querySelectorAll('.comment').length})`;
 				statusMessage.textContent = 'Comentario publicado.';
+			}
+			if (viewer) {
+				localStorage.setItem('comment-display-name', String(formData.get('name') ?? ''));
+				localStorage.setItem('comment-show-avatar', String(formData.get('showAvatar') === 'on'));
 			}
 			form.reset();
 			form.hidden = true;
@@ -270,6 +293,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 	.choice-card span { color: rgb(var(--gray)); font-size: .9rem; }
 	.comment-form label { display: block; margin-bottom: 1rem; font-weight: 700; }
 	.comment-form input, .comment-form textarea { width: 100%; margin-top: .4rem; padding: .75rem; box-sizing: border-box; color: var(--text); background: var(--background); border: 1px solid var(--border); border-radius: 10px; font: inherit; }
+	.comment-form .avatar-preference { display: flex; align-items: center; gap: .6rem; font-weight: 400; }
+	.comment-form .avatar-preference input { width: auto; margin: 0; }
 	.comment-form textarea { resize: vertical; }
 	.honeypot { position: absolute; left: -10000px; }
 	.form-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }

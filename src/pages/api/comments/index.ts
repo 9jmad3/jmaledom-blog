@@ -50,8 +50,8 @@ export const POST: APIRoute = async (context) => {
 	}
 
 	const viewer = await getViewer(context.request);
-	const guestName = String(input.name ?? '').trim();
-	const authorName = viewer?.name?.trim() || guestName;
+	const authorName = String(input.name ?? '').trim();
+	const showAvatar = input.showAvatar === true;
 	if (authorName.length < 2 || authorName.length > 60) return json({ error: 'Indica un nombre válido.' }, 400);
 
 	const ip = getClientIp(context);
@@ -78,7 +78,7 @@ export const POST: APIRoute = async (context) => {
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		 RETURNING id, author_name AS "authorName", author_image AS "authorImage", body,
 		           created_at AS "createdAt", status`,
-		[article, viewer?.id ?? null, authorName, viewer?.image ?? null, body, moderation.status, moderation.reason, ipHash],
+		[article, viewer?.id ?? null, authorName, viewer && showAvatar ? viewer.image ?? null : null, body, moderation.status, moderation.reason, ipHash],
 	);
 
 	return json({ comment: inserted.rows[0], pending: moderation.status === 'pending' }, 201);
