@@ -134,7 +134,10 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 					try {
 						const response = await fetch(`/api/comments/${comment.id}`, { method: 'DELETE' });
 						const result = await response.json().catch(() => ({}));
-						if (!response.ok) throw new Error(result.error ?? 'No se ha podido eliminar.');
+						if (!response.ok) {
+							const explanation = result.detail ? `${result.error ?? 'No se ha podido eliminar.'} (${result.detail})` : result.error;
+							throw new Error(explanation ?? 'No se ha podido eliminar.');
+						}
 						item.remove();
 						const remaining = list.querySelectorAll('.comment').length;
 						count.textContent = remaining ? `(${remaining})` : '';
