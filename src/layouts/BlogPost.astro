@@ -7,6 +7,7 @@ import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
 import ShareButton from '../components/ShareButton.astro';
 import Comments from '../components/Comments.astro';
+import Reactions from '../components/Reactions.astro';
 
 type PostLink = { id: string; title: string };
 type Props = CollectionEntry<'blog'>['data'] & {
@@ -100,6 +101,7 @@ const articleSlug = Astro.url.pathname.split('/').filter(Boolean).at(-1) ?? '';
 						<hr />
 					</div>
 					<slot />
+					<Reactions article={articleSlug} />
 					<ShareButton {title} {description} />
 					<Comments article={articleSlug} />
 					{(newerPost || olderPost) && (
