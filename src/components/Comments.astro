@@ -45,7 +45,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 		</label>
 		<div class="form-footer">
 			<small><span data-character-count>0</span>/1500</small>
-			<div class="cf-turnstile" data-turnstile-container></div>
+			<div class="cf-turnstile" data-turnstile-container data-sitekey={turnstileSiteKey}></div>
 			<button class="primary-button" type="submit">Publicar comentario</button>
 		</div>
 		<p class="form-message" data-form-message role="status"></p>
