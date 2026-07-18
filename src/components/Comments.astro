@@ -53,6 +53,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 	<p class="comments-loading" data-comments-loading>Cargando comentarios…</p>
 	<div class="comment-list" data-comment-list></div>
+	<p class="comments-status" data-comments-status role="status"></p>
 </section>
 
 {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
@@ -82,6 +83,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 		const form = root.querySelector<HTMLFormElement>('[data-comment-form]')!;
 		const nameField = root.querySelector<HTMLElement>('[data-name-field]')!;
 		const message = root.querySelector<HTMLElement>('[data-form-message]')!;
+		const statusMessage = root.querySelector<HTMLElement>('[data-comments-status]')!;
 		const textarea = form.elements.namedItem('body') as HTMLTextAreaElement;
 		let viewer: Viewer = null;
 
@@ -195,6 +197,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 		}
 
 		root.querySelector('[data-start-comment]')?.addEventListener('click', () => {
+			statusMessage.textContent = '';
+			message.textContent = '';
 			if (viewer) openForm(false);
 			else choice.hidden = false;
 		});
@@ -231,15 +235,21 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 				message.textContent = data.error ?? 'No se ha podido publicar.';
 				return;
 			}
-			if (data.pending) message.textContent = 'El comentario ha quedado pendiente de revisión.';
+			let publishedComment: HTMLElement | null = null;
+			if (data.pending) statusMessage.textContent = 'El comentario ha quedado pendiente de revisión.';
 			else {
-				list.append(renderComment({ ...data.comment, registered: Boolean(viewer), canDelete: Boolean(viewer) }));
+				publishedComment = renderComment({ ...data.comment, registered: Boolean(viewer), canDelete: Boolean(viewer) });
+				list.append(publishedComment);
 				loading.hidden = true;
-				message.textContent = 'Comentario publicado.';
+				count.textContent = `(${list.querySelectorAll('.comment').length})`;
+				statusMessage.textContent = 'Comentario publicado.';
 			}
-			textarea.value = '';
+			form.reset();
+			form.hidden = true;
+			message.textContent = '';
 			root.querySelector<HTMLElement>('[data-character-count]')!.textContent = '0';
 			(window as typeof window & { turnstile?: { reset: () => void } }).turnstile?.reset();
+			publishedComment?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 		});
 
 		loadComments();
@@ -264,6 +274,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 	.honeypot { position: absolute; left: -10000px; }
 	.form-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 	.form-message { min-height: 1.5rem; margin: .75rem 0 0; color: rgb(var(--gray)); }
+	.comments-status { min-height: 1.5rem; margin: 1rem 0 0; color: var(--accent); font-weight: 700; }
 	.comment-list { display: grid; gap: 1rem; }
 	.comments :global(.comment) { padding: 1.1rem 0; border-bottom: 1px solid var(--border); }
 	.comments :global(.comment header), .comments :global(.comment-identity) { display: flex; align-items: center; }
