@@ -162,11 +162,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 						});
 						const result = await response.json().catch(() => ({}));
 						if (!response.ok) {
-							const diagnostic = result.diagnosticId ? ` [${result.diagnosticId}]` : '';
-							const explanation = result.detail
-								? `${result.error ?? 'No se ha podido eliminar.'} (${result.detail})${diagnostic}`
-								: `${result.error ?? 'No se ha podido eliminar.'}${diagnostic}`;
-							throw new Error(explanation ?? 'No se ha podido eliminar.');
+							throw new Error(result.error ?? 'No se ha podido eliminar.');
 						}
 						item.remove();
 						const remaining = list.querySelectorAll('.comment').length;

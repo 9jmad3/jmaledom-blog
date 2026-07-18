@@ -22,7 +22,6 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 		return json({ deleted: true });
 	} catch (error) {
 		console.error('Error al eliminar comentario:', error);
-		const detail = error instanceof Error ? error.message : String(error);
-		return json({ error: 'No se ha podido eliminar.', detail, diagnosticId: 'delete-v2' }, 500);
+		return json({ error: 'No se ha podido eliminar.' }, 500);
 	}
 };
