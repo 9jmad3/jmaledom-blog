@@ -47,10 +47,11 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 			<span>Comentario</span>
 			<textarea name="body" rows="5" minlength="2" maxlength="1500" required></textarea>
 		</label>
+		<p class="privacy-note">Si continúas con Google, tu correo nunca se mostrará públicamente. <a href="/privacidad/">Más información</a>.</p>
 		<div class="form-footer">
 			<small><span data-character-count>0</span>/1500</small>
 			<div class="cf-turnstile" data-turnstile-container data-sitekey={turnstileSiteKey}></div>
-			<button class="primary-button" type="submit">Publicar comentario</button>
+			<button class="primary-button" type="submit" data-submit-comment>Publicar comentario</button>
 		</div>
 		<p class="form-message" data-form-message role="status"></p>
 	</form>
@@ -94,6 +95,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 		const message = root.querySelector<HTMLElement>('[data-form-message]')!;
 		const statusMessage = root.querySelector<HTMLElement>('[data-comments-status]')!;
 		const textarea = form.elements.namedItem('body') as HTMLTextAreaElement;
+		const submitButton = root.querySelector<HTMLButtonElement>('[data-submit-comment]')!;
 		let viewer: Viewer = null;
 
 		const formatDate = (value: string) =>
@@ -241,28 +243,41 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 		form.addEventListener('submit', async (event) => {
 			event.preventDefault();
-			message.textContent = 'Publicando…';
 			const formData = new FormData(form);
 			const turnstileToken = formData.get('cf-turnstile-response') ?? '';
 			if (siteKey && !turnstileToken) {
 				message.textContent = 'Completa la comprobación de seguridad.';
 				return;
 			}
-			const response = await fetch('/api/comments', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					article,
-					name: formData.get('name'),
-					body: formData.get('body'),
-					showAvatar: formData.get('showAvatar') === 'on',
-					website: formData.get('website'),
-					turnstileToken,
-				}),
-			});
-			const data = await response.json();
+			submitButton.disabled = true;
+			submitButton.textContent = 'Publicando…';
+			message.textContent = 'Enviando tu comentario…';
+			let response: Response;
+			let data: { error?: string; pending: boolean; comment: PublicComment };
+			try {
+				response = await fetch('/api/comments', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						article,
+						name: formData.get('name'),
+						body: formData.get('body'),
+						showAvatar: formData.get('showAvatar') === 'on',
+						website: formData.get('website'),
+						turnstileToken,
+					}),
+				});
+				data = await response.json();
+			} catch {
+				message.textContent = 'No se ha podido conectar. Inténtalo de nuevo.';
+				submitButton.disabled = false;
+				submitButton.textContent = 'Publicar comentario';
+				return;
+			}
 			if (!response.ok) {
 				message.textContent = data.error ?? 'No se ha podido publicar.';
+				submitButton.disabled = false;
+				submitButton.textContent = 'Publicar comentario';
 				return;
 			}
 			let publishedComment: HTMLElement | null = null;
@@ -280,6 +295,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 			}
 			form.reset();
 			form.hidden = true;
+			submitButton.disabled = false;
+			submitButton.textContent = 'Publicar comentario';
 			message.textContent = '';
 			root.querySelector<HTMLElement>('[data-character-count]')!.textContent = '0';
 			(window as typeof window & { turnstile?: { reset: () => void } }).turnstile?.reset();
@@ -296,6 +313,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 	.comments-heading h2 { margin: 0; font-size: 1.7rem; }
 	.eyebrow { margin: 0 0 .25rem; color: var(--accent); font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 	.primary-button { padding: .75rem 1rem; color: white; background: var(--accent); border: 0; border-radius: 999px; font: inherit; font-weight: 700; cursor: pointer; }
+	.primary-button:disabled { cursor: wait; opacity: .65; }
 	.comment-choice, .comment-form { margin: 1.5rem 0; padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
 	.comment-choice h3 { margin-top: 0; }
 	.choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
@@ -307,6 +325,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 	.comment-form .avatar-preference { display: flex; align-items: center; gap: .6rem; font-weight: 400; }
 	.comment-form .avatar-preference input { width: auto; margin: 0; }
 	.comment-form textarea { resize: vertical; }
+	.privacy-note { margin: -.25rem 0 1rem; color: rgb(var(--gray)); font-size: .82rem; line-height: 1.5; }
+	.privacy-note a { color: inherit; text-underline-offset: .2em; }
 	.honeypot { position: absolute; left: -10000px; }
 	.form-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 	.form-message { min-height: 1.5rem; margin: .75rem 0 0; color: rgb(var(--gray)); }
