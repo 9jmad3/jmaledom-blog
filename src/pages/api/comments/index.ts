@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
-import { COMMENT_MAX_LENGTH, getClientIp, getViewer, hashIp, isAdmin, isTrustedRequest, json, moderateComment, verifyTurnstile } from '../../../lib/comments';
+import { COMMENT_MAX_LENGTH, getAdminEmails, getClientIp, getViewer, hashIp, isAdmin, isTrustedRequest, json, moderateComment, verifyTurnstile } from '../../../lib/comments';
 import { requireDatabase } from '../../../lib/db';
 
 export const prerender = false;
@@ -18,13 +18,15 @@ export const GET: APIRoute = async ({ url, request }) => {
 	const viewer = await getViewer(request);
 
 	const result = await requireDatabase().query(
-		`SELECT id, author_name AS "authorName", author_image AS "authorImage", body,
+		`SELECT comments.id, author_name AS "authorName", author_image AS "authorImage", body,
 		        created_at AS "createdAt", user_id IS NOT NULL AS "registered",
-		        (user_id = $2 OR $3 = true) AS "canDelete"
+		        (user_id = $2 OR $3 = true) AS "canDelete",
+		        COALESCE(lower(author.email) = ANY($4::text[]), false) AS "isAuthor"
 		 FROM comments
+		 LEFT JOIN "user" author ON author.id = comments.user_id
 		 WHERE article_slug = $1 AND status = 'published' AND deleted_at IS NULL
-		 ORDER BY created_at ASC`,
-		[article, viewer?.id ?? null, isAdmin(viewer?.email)],
+		 ORDER BY comments.created_at ASC`,
+		[article, viewer?.id ?? null, isAdmin(viewer?.email), getAdminEmails()],
 	);
 	return json({ comments: result.rows, viewer: viewer ? { name: viewer.name, image: viewer.image } : null });
 };
@@ -81,5 +83,8 @@ export const POST: APIRoute = async (context) => {
 		[article, viewer?.id ?? null, authorName, viewer && showAvatar ? viewer.image ?? null : null, body, moderation.status, moderation.reason, ipHash],
 	);
 
-	return json({ comment: inserted.rows[0], pending: moderation.status === 'pending' }, 201);
+	return json({
+		comment: { ...inserted.rows[0], isAuthor: isAdmin(viewer?.email) },
+		pending: moderation.status === 'pending',
+	}, 201);
 };

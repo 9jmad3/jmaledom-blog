@@ -74,6 +74,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 		createdAt: string;
 		registered: boolean;
 		canDelete: boolean;
+		isAuthor: boolean;
 	};
 
 	const root = document.querySelector<HTMLElement>('[data-comments]');
@@ -116,10 +117,20 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 			const meta = document.createElement('div');
 			const author = document.createElement('strong');
 			author.textContent = comment.authorName;
+			const authorLine = document.createElement('span');
+			authorLine.className = 'comment-author-line';
+			authorLine.append(author);
+			if (comment.isAuthor) {
+				const badge = document.createElement('span');
+				badge.className = 'author-badge';
+				badge.textContent = 'Autor';
+				badge.title = 'Autor del blog';
+				authorLine.append(badge);
+			}
 			const date = document.createElement('time');
 			date.dateTime = comment.createdAt;
 			date.textContent = formatDate(comment.createdAt);
-			meta.append(author, date);
+			meta.append(authorLine, date);
 			identity.append(meta);
 			header.append(identity);
 			if (comment.canDelete) {
@@ -308,6 +319,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 	.comments :global(.comment-identity img) { flex: 0 0 auto; border-radius: 50%; object-fit: cover; }
 	.comments :global(.comment-identity div) { display: flex; min-width: 0; flex-direction: column; }
 	.comments :global(.comment-identity strong) { line-height: 1.25; overflow-wrap: anywhere; }
+	.comments :global(.comment-author-line) { display: flex; align-items: center; flex-direction: row; flex-wrap: wrap; gap: .45rem; }
+	.comments :global(.author-badge) { padding: .15rem .45rem; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 999px; font-size: .65rem; font-weight: 700; letter-spacing: .04em; line-height: 1.2; text-transform: uppercase; }
 	.comments :global(.comment time) { color: rgb(var(--gray)); font-size: .8rem; line-height: 1.4; }
 	.comments :global(.comment > p) { margin: .85rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 	.comments :global(.delete-comment) { flex: 0 0 auto; padding: .35rem .65rem; color: rgb(var(--gray)); background: transparent; border: 1px solid var(--border); border-radius: 999px; font: inherit; font-size: .78rem; cursor: pointer; }

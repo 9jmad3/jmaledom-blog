@@ -68,10 +68,13 @@ export async function verifyTurnstile(token: string, ip: string) {
 	return result.success === true;
 }
 
-export function isAdmin(email?: string | null) {
-	const admins = (process.env.COMMENT_ADMIN_EMAILS ?? '')
+export function getAdminEmails() {
+	return (process.env.COMMENT_ADMIN_EMAILS ?? '')
 		.split(',')
 		.map((value) => value.trim().toLowerCase())
 		.filter(Boolean);
-	return Boolean(email && admins.includes(email.toLowerCase()));
+}
+
+export function isAdmin(email?: string | null) {
+	return Boolean(email && getAdminEmails().includes(email.toLowerCase()));
 }
