@@ -19,23 +19,47 @@ async function getCloudflareHistory() {
 		} }
 	}`;
 	try {
-		const response = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-			method: 'POST',
-			headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-			body: JSON.stringify({ query, variables: { accountTag, filter: { AND: [{ datetime_geq: start.toISOString(), datetime_leq: end.toISOString() }, { siteTag }] } } }),
-			signal: AbortSignal.timeout(10_000),
-		});
-		const payload = await response.json() as { data?: { viewer?: { accounts?: { total?: { count: number; sum: { visits: number } }[]; topPaths?: { count: number; sum: { visits: number }; dimensions: { requestPath: string } }[] }[] } }; errors?: { message: string }[] };
-		if (!response.ok || payload.errors?.length) throw new Error(payload.errors?.[0]?.message ?? `Cloudflare respondió ${response.status}`);
-		const account = payload.data?.viewer?.accounts?.[0];
-		const total = account?.total?.[0];
+		const ranges: { from: Date; to: Date }[] = [];
+		for (let from = new Date(start); from < end;) {
+			const to = new Date(Math.min(end.getTime(), from.getTime() + 90 * 24 * 60 * 60 * 1000));
+			ranges.push({ from: new Date(from), to });
+			from = to;
+		}
+		const accounts = await Promise.all(ranges.map(async (range) => {
+			const response = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+				method: 'POST',
+				headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ query, variables: { accountTag, filter: { AND: [{ datetime_geq: range.from.toISOString(), datetime_lt: range.to.toISOString() }, { siteTag }] } } }),
+				signal: AbortSignal.timeout(10_000),
+			});
+			const payload = await response.json() as { data?: { viewer?: { accounts?: { total?: { count: number; sum: { visits: number } }[]; topPaths?: { count: number; sum: { visits: number }; dimensions: { requestPath: string } }[] }[] } }; errors?: { message: string }[] };
+			if (!response.ok || payload.errors?.length) throw new Error(payload.errors?.[0]?.message ?? `Cloudflare respondió ${response.status}`);
+			return payload.data?.viewer?.accounts?.[0];
+		}));
+		const paths = new Map<string, { pageViews: number; visits: number }>();
+		let pageViews = 0;
+		let visits = 0;
+		for (const account of accounts) {
+			pageViews += account?.total?.[0]?.count ?? 0;
+			visits += account?.total?.[0]?.sum.visits ?? 0;
+			for (const row of account?.topPaths ?? []) {
+				const current = paths.get(row.dimensions.requestPath) ?? { pageViews: 0, visits: 0 };
+				current.pageViews += row.count;
+				current.visits += row.sum.visits;
+				paths.set(row.dimensions.requestPath, current);
+			}
+		}
 		return {
 			available: true,
 			from: start.toISOString(),
 			to: end.toISOString(),
-			pageViews: total?.count ?? 0,
-			visits: total?.sum.visits ?? 0,
-			topArticles: (account?.topPaths ?? []).filter((row) => /^\/blog\/[^/]+\/$/.test(row.dimensions.requestPath)).slice(0, 10).map((row) => ({ path: row.dimensions.requestPath, pageViews: row.count, visits: row.sum.visits })),
+			pageViews,
+			visits,
+			topArticles: [...paths.entries()]
+				.filter(([path]) => /^\/blog\/[^/]+\/$/.test(path))
+				.map(([path, totals]) => ({ path, ...totals }))
+				.sort((a, b) => b.pageViews - a.pageViews)
+				.slice(0, 10),
 		};
 	} catch (error) {
 		console.error('No se pudo consultar Cloudflare Web Analytics:', error);
