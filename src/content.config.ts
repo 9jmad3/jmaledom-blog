@@ -1,6 +1,7 @@
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
+import { BLOG_TAG_SLUGS } from './lib/tags';
 
 const blog = defineCollection({
 	// Load Markdown and MDX files in the `src/content/blog/` directory.
@@ -15,6 +16,7 @@ const blog = defineCollection({
 			updatedDate: z.coerce.date().optional(),
 			heroImage: z.optional(image()),
 			socialImage: z.optional(image()),
+			tags: z.array(z.enum(BLOG_TAG_SLUGS)).min(1).max(3),
 		}),
 });
 

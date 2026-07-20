@@ -4,6 +4,7 @@ description: 'Sobre cómo lo extraordinario se vuelve cotidiano y la importancia
 pubDate: '2026-07-14'
 heroImage: '../../assets/la-costumbre-de-tener-suerte.png'
 socialImage: '../../assets/la-costumbre-de-tener-suerte-social.png'
+tags: ['relaciones', 'baile', 'percepcion']
 ---
 
 Hay cosas que, de tanto tenerlas cerca, dejan de parecernos extraordinarias.

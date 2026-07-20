@@ -8,15 +8,18 @@ import Header from '../components/Header.astro';
 import ShareButton from '../components/ShareButton.astro';
 import Comments from '../components/Comments.astro';
 import Reactions from '../components/Reactions.astro';
+import TagList from '../components/TagList.astro';
+import type { BlogTag } from '../lib/tags';
 
 type PostLink = { id: string; title: string };
 type Props = CollectionEntry<'blog'>['data'] & {
 	readingMinutes: number;
+	tags: BlogTag[];
 	newerPost?: PostLink;
 	olderPost?: PostLink;
 };
 
-const { title, description, pubDate, updatedDate, heroImage, socialImage, readingMinutes, newerPost, olderPost } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, socialImage, readingMinutes, tags, newerPost, olderPost } = Astro.props;
 const articleSlug = Astro.url.pathname.split('/').filter(Boolean).at(-1) ?? '';
 ---
 
@@ -98,6 +101,7 @@ const articleSlug = Astro.url.pathname.split('/').filter(Boolean).at(-1) ?? '';
 							}
 						</div>
 						<h1>{title}</h1>
+						<TagList {tags} />
 						<hr />
 					</div>
 					<slot />
