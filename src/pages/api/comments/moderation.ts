@@ -13,10 +13,11 @@ export const GET: APIRoute = async ({ request }) => {
 	if (!(await authorize(request))) return json({ error: 'No autorizado.' }, 403);
 	const result = await requireDatabase().query(
 		`SELECT id, article_slug AS "articleSlug", author_name AS "authorName", body,
-		        moderation_reason AS "moderationReason", created_at AS "createdAt"
+		        status, moderation_reason AS "moderationReason", created_at AS "createdAt"
 		 FROM comments
-		 WHERE status = 'pending' AND deleted_at IS NULL
-		 ORDER BY created_at ASC`,
+		 WHERE status IN ('pending', 'published', 'rejected') AND deleted_at IS NULL
+		 ORDER BY created_at DESC
+		 LIMIT 500`,
 	);
 	return json({ comments: result.rows });
 };

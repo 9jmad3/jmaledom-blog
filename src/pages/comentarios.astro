@@ -12,23 +12,45 @@ import Header from '../components/Header.astro';
 	<body>
 		<Header />
 		<main class="moderation">
-			<h1>Comentarios pendientes</h1>
-			<div data-auth-actions>
-				<button type="button" data-admin-login>Entrar con Google</button>
-				<button type="button" data-admin-logout hidden>Cerrar sesión</button>
+			<div class="moderation-heading">
+				<div><p class="eyebrow">Administración</p><h1>Comentarios</h1></div>
+				<div data-auth-actions>
+					<button type="button" data-admin-login>Entrar con Google</button>
+					<button type="button" data-admin-logout hidden>Cerrar sesión</button>
+				</div>
 			</div>
 			<p data-admin-message>Inicia sesión con la cuenta configurada como administradora.</p>
-			<div class="pending-list" data-pending-list></div>
+			<section class="dashboard" data-dashboard hidden>
+				<div class="status-tabs" role="tablist" aria-label="Estado de los comentarios">
+					<button class="status-tab is-active" type="button" data-status="pending">Pendientes <span data-count="pending">0</span></button>
+					<button class="status-tab" type="button" data-status="published">Publicados <span data-count="published">0</span></button>
+					<button class="status-tab" type="button" data-status="rejected">Rechazados <span data-count="rejected">0</span></button>
+				</div>
+				<div class="filters">
+					<label><span>Buscar</span><input type="search" data-search placeholder="Nombre o contenido…" autocomplete="off" /></label>
+					<label><span>Artículo</span><select data-article-filter><option value="">Todos los artículos</option></select></label>
+				</div>
+				<p class="results-summary" data-results-summary></p>
+				<div class="comment-list" data-comment-list></div>
+			</section>
 		</main>
 	</body>
 </html>
 
 <script>
 	import { authClient } from '../lib/auth-client';
+	type Status = 'pending' | 'published' | 'rejected';
+	type ModerationComment = { id: string; articleSlug: string; authorName: string; body: string; status: Status; moderationReason: string | null; createdAt: string };
 	const message = document.querySelector<HTMLElement>('[data-admin-message]')!;
-	const list = document.querySelector<HTMLElement>('[data-pending-list]')!;
+	const dashboard = document.querySelector<HTMLElement>('[data-dashboard]')!;
+	const list = document.querySelector<HTMLElement>('[data-comment-list]')!;
 	const login = document.querySelector<HTMLButtonElement>('[data-admin-login]')!;
 	const logout = document.querySelector<HTMLButtonElement>('[data-admin-logout]')!;
+	const search = document.querySelector<HTMLInputElement>('[data-search]')!;
+	const articleFilter = document.querySelector<HTMLSelectElement>('[data-article-filter]')!;
+	const summary = document.querySelector<HTMLElement>('[data-results-summary]')!;
+	let comments: ModerationComment[] = [];
+	let activeStatus: Status = 'pending';
 
 	login.addEventListener('click', () => authClient.signIn.social({ provider: 'google', callbackURL: window.location.href }));
 	logout.addEventListener('click', async () => { await authClient.signOut(); window.location.reload(); });
@@ -36,19 +58,104 @@ import Header from '../components/Header.astro';
 	async function moderate(id: string, action: 'publish' | 'reject', item: HTMLElement) {
 		const buttons = item.querySelectorAll<HTMLButtonElement>('button');
 		buttons.forEach((button) => button.disabled = true);
-		const response = await fetch('/api/comments/moderation', {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ id, action }),
-		});
+		const response = await fetch('/api/comments/moderation', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action }) });
 		if (response.ok) {
-			item.remove();
-			if (!list.children.length) message.textContent = 'No hay comentarios pendientes.';
+			const comment = comments.find((entry) => entry.id === id);
+			if (comment) comment.status = action === 'publish' ? 'published' : 'rejected';
+			message.textContent = '';
+			render();
 		} else {
 			buttons.forEach((button) => button.disabled = false);
 			message.textContent = 'No se ha podido actualizar el comentario.';
 		}
 	}
+
+	async function removeComment(id: string, item: HTMLElement) {
+		if (!window.confirm('¿Eliminar este comentario publicado? Esta acción no se puede deshacer.')) return;
+		const buttons = item.querySelectorAll<HTMLButtonElement>('button');
+		buttons.forEach((button) => button.disabled = true);
+		const response = await fetch(`/api/comments/${id}`, { method: 'DELETE' });
+		if (response.ok) {
+			comments = comments.filter((comment) => comment.id !== id);
+			message.textContent = '';
+			render();
+		} else {
+			buttons.forEach((button) => button.disabled = false);
+			message.textContent = 'No se ha podido eliminar el comentario.';
+		}
+	}
+
+	function updateCounts() {
+		for (const status of ['pending', 'published', 'rejected'] as Status[]) {
+			document.querySelector<HTMLElement>(`[data-count="${status}"]`)!.textContent = String(comments.filter((comment) => comment.status === status).length);
+		}
+	}
+
+	function createComment(comment: ModerationComment) {
+		const item = document.createElement('article');
+		item.className = 'moderation-comment';
+		const title = document.createElement('strong');
+		title.textContent = comment.authorName;
+		const meta = document.createElement('div');
+		meta.className = 'comment-meta';
+		const article = document.createElement('a');
+		article.href = `/blog/${comment.articleSlug}/`;
+		article.textContent = comment.articleSlug;
+		article.target = '_blank';
+		article.rel = 'noopener';
+		const date = document.createElement('time');
+		date.dateTime = comment.createdAt;
+		date.textContent = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(comment.createdAt));
+		meta.append(article, date);
+		const body = document.createElement('p');
+		body.textContent = comment.body;
+		const actions = document.createElement('div');
+		actions.className = 'comment-actions';
+		if (comment.status === 'pending') {
+			const publish = document.createElement('button');
+			publish.className = 'primary-action';
+			publish.textContent = 'Publicar';
+			publish.addEventListener('click', () => moderate(comment.id, 'publish', item));
+			const reject = document.createElement('button');
+			reject.textContent = 'Rechazar';
+			reject.addEventListener('click', () => moderate(comment.id, 'reject', item));
+			actions.append(publish, reject);
+		} else if (comment.status === 'published') {
+			const remove = document.createElement('button');
+			remove.className = 'danger-action';
+			remove.textContent = 'Eliminar';
+			remove.addEventListener('click', () => removeComment(comment.id, item));
+			actions.append(remove);
+		}
+		item.append(title, meta, body);
+		if (actions.children.length) item.append(actions);
+		return item;
+	}
+
+	function render() {
+		updateCounts();
+		const query = search.value.trim().toLocaleLowerCase('es');
+		const article = articleFilter.value;
+		const filtered = comments.filter((comment) => comment.status === activeStatus && (!article || comment.articleSlug === article) && (!query || `${comment.authorName} ${comment.body}`.toLocaleLowerCase('es').includes(query)));
+		list.replaceChildren();
+		summary.textContent = `${filtered.length} ${filtered.length === 1 ? 'comentario' : 'comentarios'}`;
+		if (!filtered.length) {
+			const empty = document.createElement('p');
+			empty.className = 'empty-state';
+			empty.textContent = query || article ? 'No hay resultados con estos filtros.' : `No hay comentarios ${activeStatus === 'pending' ? 'pendientes' : activeStatus === 'published' ? 'publicados' : 'rechazados'}.`;
+			list.append(empty);
+			return;
+		}
+		for (const comment of filtered) list.append(createComment(comment));
+	}
+
+	document.querySelectorAll<HTMLButtonElement>('[data-status]').forEach((tab) => tab.addEventListener('click', () => {
+		activeStatus = tab.dataset.status as Status;
+		document.querySelectorAll('[data-status]').forEach((entry) => entry.classList.toggle('is-active', entry === tab));
+		render();
+	}));
+	search.addEventListener('input', render);
+	articleFilter.addEventListener('change', render);
 
 	async function load() {
 		const session = await authClient.getSession();
@@ -58,59 +165,50 @@ import Header from '../components/Header.astro';
 		const response = await fetch('/api/comments/moderation');
 		if (response.status === 403) { message.textContent = 'Esta cuenta no tiene permiso para moderar.'; return; }
 		if (!response.ok) { message.textContent = 'No se han podido cargar los comentarios.'; return; }
-		const data = await response.json();
-		message.textContent = data.comments.length ? '' : 'No hay comentarios pendientes.';
-		for (const comment of data.comments) {
-			const item = document.createElement('article');
-			item.className = 'pending-comment';
-			const title = document.createElement('strong');
-			title.textContent = comment.authorName;
-			const meta = document.createElement('div');
-			meta.className = 'pending-meta';
-			const article = document.createElement('a');
-			article.href = `/blog/${comment.articleSlug}/`;
-			article.textContent = comment.articleSlug;
-			article.target = '_blank';
-			const date = document.createElement('time');
-			date.dateTime = comment.createdAt;
-			date.textContent = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(comment.createdAt));
-			meta.append(article, date);
-			const body = document.createElement('p');
-			body.textContent = comment.body;
-			const actions = document.createElement('div');
-			actions.className = 'pending-actions';
-			const publish = document.createElement('button');
-			publish.className = 'publish-comment';
-			publish.textContent = 'Publicar';
-			publish.addEventListener('click', () => moderate(comment.id, 'publish', item));
-			const reject = document.createElement('button');
-			reject.className = 'reject-comment';
-			reject.textContent = 'Rechazar';
-			reject.addEventListener('click', () => moderate(comment.id, 'reject', item));
-			actions.append(publish, reject);
-			item.append(title, meta, body, actions);
-			list.append(item);
+		const data = await response.json() as { comments: ModerationComment[] };
+		comments = data.comments;
+		for (const slug of [...new Set(comments.map((comment) => comment.articleSlug))].sort()) {
+			const option = document.createElement('option');
+			option.value = slug;
+			option.textContent = slug;
+			articleFilter.append(option);
 		}
+		message.textContent = '';
+		dashboard.hidden = false;
+		render();
 	}
 	load();
 </script>
 
 <style>
-	.moderation { width: min(760px, calc(100% - 2rem)); padding-top: 4rem; padding-bottom: 5rem; }
-	.moderation h1 { font-size: clamp(2.5rem, 7vw, 5rem); }
+	.moderation { width: min(920px, calc(100% - 2rem)); padding-top: 4rem; padding-bottom: 5rem; }
+	.moderation-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
+	.moderation h1 { margin: 0; font-size: clamp(2.5rem, 7vw, 5rem); }
+	.eyebrow { margin: 0 0 .4rem; color: var(--accent); font-size: .75rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 	[data-auth-actions] { display: flex; gap: .75rem; }
 	button { padding: .7rem 1rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; cursor: pointer; }
 	button:disabled { cursor: wait; opacity: .55; }
-	.pending-list { display: grid; gap: 1rem; margin-top: 2rem; }
-	.pending-list :global(.pending-comment) { padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 12px 30px rgb(0 0 0 / .04); }
-	.pending-list :global(.pending-comment > strong) { display: block; margin-bottom: .2rem; font-size: 1.1rem; }
-	.pending-list :global(.pending-meta) { display: flex; flex-wrap: wrap; gap: .35rem .75rem; color: rgb(var(--gray)); font-size: .8rem; }
-	.pending-list :global(.pending-meta a) { color: var(--accent); font-weight: 700; text-decoration: none; }
-	.pending-list :global(.pending-comment > p) { margin: 1.15rem 0; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
-	.pending-list :global(.pending-actions) { display: flex; flex-wrap: wrap; gap: .6rem; }
-	.pending-list :global(.pending-actions button) { padding: .6rem .9rem; border-radius: 999px; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; }
-	.pending-list :global(.publish-comment) { color: white; background: var(--accent); border: 1px solid var(--accent); }
-	.pending-list :global(.reject-comment) { color: rgb(var(--gray)); background: transparent; border: 1px solid var(--border); }
-	.pending-list :global(.pending-actions button:disabled) { cursor: wait; opacity: .55; }
+	.dashboard { margin-top: 2rem; }
+	.status-tabs { display: flex; gap: .65rem; overflow-x: auto; padding-bottom: .35rem; }
+	.status-tab { flex: 0 0 auto; font-weight: 700; }
+	.status-tab span { display: inline-grid; min-width: 1.55rem; min-height: 1.55rem; margin-left: .35rem; place-items: center; background: var(--background); border-radius: 999px; font-size: .72rem; }
+	.status-tab.is-active { color: white; background: var(--text); border-color: var(--text); }
+	.status-tab.is-active span { color: var(--text); background: var(--surface); }
+	.filters { display: grid; grid-template-columns: 1fr minmax(210px, .55fr); gap: 1rem; margin-top: 1.5rem; }
+	.filters label { display: grid; gap: .45rem; color: rgb(var(--gray)); font-size: .78rem; font-weight: 700; }
+	.filters input, .filters select { width: 100%; padding: .8rem .9rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font: inherit; }
+	.results-summary { margin: 1.25rem 0 .75rem; color: rgb(var(--gray)); font-size: .85rem; }
+	.comment-list { display: grid; gap: 1rem; }
+	.comment-list :global(.moderation-comment) { padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 12px 30px rgb(0 0 0 / .04); }
+	.comment-list :global(.moderation-comment > strong) { display: block; margin-bottom: .2rem; font-size: 1.1rem; }
+	.comment-list :global(.comment-meta) { display: flex; flex-wrap: wrap; gap: .35rem .75rem; color: rgb(var(--gray)); font-size: .8rem; }
+	.comment-list :global(.comment-meta a) { color: var(--accent); font-weight: 700; text-decoration: none; }
+	.comment-list :global(.moderation-comment > p) { margin: 1.15rem 0; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+	.comment-list :global(.comment-actions) { display: flex; flex-wrap: wrap; gap: .6rem; }
+	.comment-list :global(.comment-actions button) { padding: .6rem .9rem; font: inherit; font-size: .85rem; font-weight: 700; }
+	.comment-list :global(.primary-action) { color: white; background: var(--accent); border-color: var(--accent); }
+	.comment-list :global(.danger-action) { color: #a32a20; border-color: color-mix(in srgb, #a32a20 35%, var(--border)); }
+	.comment-list :global(.empty-state) { padding: 2rem; color: rgb(var(--gray)); text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: 16px; }
 	[hidden] { display: none !important; }
+	@media (max-width: 640px) { .moderation-heading { align-items: start; flex-direction: column; } .filters { grid-template-columns: 1fr; } }
 </style>
