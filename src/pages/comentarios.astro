@@ -23,6 +23,7 @@ import Header from '../components/Header.astro';
 			<section class="dashboard" data-dashboard hidden>
 				<section class="analytics-panel" aria-labelledby="analytics-title">
 					<div class="section-heading"><div><p class="eyebrow">Últimos 30 días</p><h2 id="analytics-title">Resumen del blog</h2></div><span class="analytics-note">Desde la activación de las métricas</span></div>
+					<div class="cloudflare-history" data-cloudflare-history><p>Consultando el histórico de Cloudflare…</p></div>
 					<div class="metric-grid" data-metric-grid aria-live="polite"><p>Cargando métricas…</p></div>
 					<div class="chart-card"><h3>Visitas diarias</h3><div class="daily-chart" data-daily-chart></div></div>
 					<div class="articles-card"><h3>Rendimiento por artículo</h3><div class="article-metrics" data-article-metrics></div></div>
@@ -58,6 +59,7 @@ import Header from '../components/Header.astro';
 	const metricGrid = document.querySelector<HTMLElement>('[data-metric-grid]')!;
 	const dailyChart = document.querySelector<HTMLElement>('[data-daily-chart]')!;
 	const articleMetrics = document.querySelector<HTMLElement>('[data-article-metrics]')!;
+	const cloudflareHistory = document.querySelector<HTMLElement>('[data-cloudflare-history]')!;
 	let comments: ModerationComment[] = [];
 	let activeStatus: Status = 'pending';
 
@@ -200,7 +202,25 @@ import Header from '../components/Header.astro';
 			summary: { totalViews: number; views30Days: number; readers30Days: number; viewsToday: number; averageSeconds: number; completionRate: number };
 			daily: { date: string; views: number }[];
 			articles: { articleSlug: string; views: number; readers: number; averageSeconds: number; completionRate: number; comments: number; reactions: number }[];
+			cloudflare: { available: boolean; error?: string; from?: string; to?: string; pageViews?: number; visits?: number; topArticles?: { path: string; pageViews: number; visits: number }[] };
 		};
+		if (data.cloudflare.available) {
+			const heading = document.createElement('div'); heading.className = 'history-heading';
+			const title = document.createElement('strong'); title.textContent = 'Histórico de Cloudflare · últimos 6 meses';
+			const totals = document.createElement('p'); totals.textContent = `${data.cloudflare.pageViews ?? 0} páginas vistas · ${data.cloudflare.visits ?? 0} visitas`;
+			heading.append(title, totals);
+			const paths = document.createElement('div'); paths.className = 'history-paths';
+			for (const article of data.cloudflare.topArticles ?? []) {
+				const row = document.createElement('p');
+				const link = document.createElement('a'); link.href = article.path; link.textContent = article.path.split('/').filter(Boolean).at(-1) ?? article.path; link.target = '_blank';
+				const value = document.createElement('span'); value.textContent = `${article.pageViews} vistas · ${article.visits} visitas`;
+				row.append(link, value); paths.append(row);
+			}
+			cloudflareHistory.replaceChildren(heading, paths);
+		} else {
+			cloudflareHistory.classList.add('is-error');
+			cloudflareHistory.textContent = data.cloudflare.error ?? 'Histórico de Cloudflare no disponible.';
+		}
 		const metrics = [
 			['Visitas (30 días)', data.summary.views30Days],
 			['Lectores aproximados', data.summary.readers30Days],
@@ -245,6 +265,14 @@ import Header from '../components/Header.astro';
 	button:disabled { cursor: wait; opacity: .55; }
 	.dashboard { margin-top: 2rem; }
 	.analytics-panel { margin-bottom: 3rem; }
+	.cloudflare-history { margin-bottom: .75rem; padding: 1rem; color: white; background: var(--text); border-radius: 16px; }
+	.cloudflare-history.is-error { color: rgb(var(--gray)); background: var(--surface); border: 1px dashed var(--border); }
+	.cloudflare-history :global(.history-heading) { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+	.cloudflare-history :global(.history-heading p) { margin: 0; color: rgb(255 255 255 / .7); font-size: .85rem; }
+	.cloudflare-history :global(.history-paths) { display: grid; gap: .5rem; margin-top: 1rem; }
+	.cloudflare-history :global(.history-paths p) { display: flex; justify-content: space-between; gap: 1rem; margin: 0; padding-top: .5rem; border-top: 1px solid rgb(255 255 255 / .15); font-size: .78rem; }
+	.cloudflare-history :global(.history-paths a) { color: white; font-weight: 700; text-decoration: none; }
+	.cloudflare-history :global(.history-paths span) { color: rgb(255 255 255 / .7); }
 	.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 	.section-heading h2 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.5rem); }
 	.analytics-note { color: rgb(var(--gray)); font-size: .75rem; }
@@ -282,5 +310,5 @@ import Header from '../components/Header.astro';
 	.comment-list :global(.danger-action) { color: #a32a20; border-color: color-mix(in srgb, #a32a20 35%, var(--border)); }
 	.comment-list :global(.empty-state) { padding: 2rem; color: rgb(var(--gray)); text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: 16px; }
 	[hidden] { display: none !important; }
-	@media (max-width: 640px) { .moderation-heading, .section-heading { align-items: start; flex-direction: column; } .filters { grid-template-columns: 1fr; } .metric-grid { grid-template-columns: repeat(2, 1fr); } }
+	@media (max-width: 640px) { .moderation-heading, .section-heading, .cloudflare-history :global(.history-heading) { align-items: start; flex-direction: column; } .cloudflare-history :global(.history-paths p) { flex-direction: column; gap: .2rem; } .filters { grid-template-columns: 1fr; } .metric-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
