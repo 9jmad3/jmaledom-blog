@@ -82,12 +82,12 @@ const tagCounts = Object.fromEntries(
 	.tag-navigation a { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .7rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; font-size: .78rem; font-weight: 700; text-decoration: none; }
 	.tag-navigation a:hover { color: var(--accent); border-color: var(--accent); }
 	.tag-navigation small { color: var(--muted); font-size: .65rem; }
-	.post-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+	.post-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; margin: 0; padding: 0; list-style: none; }
 	.post-list li, .post-list li:first-child { width: 100%; margin: 0; text-align: left; }
 	.post-list li.featured { grid-column: 1 / -1; width: min(100%, 760px); justify-self: center; }
 	.post-card { position: relative; display: grid; height: 100%; overflow: hidden; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 22px; transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
 	.featured .post-card { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
-	.featured .post-image { max-height: 320px; }
+	.featured .post-image { height: 100%; min-height: 320px; }
 	.featured .post-copy { padding: clamp(1.5rem, 3vw, 2rem); }
 	.featured .post-copy h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); }
 	.post-card:hover { border-color: var(--accent); box-shadow: var(--box-shadow); transform: translateY(-5px); }
@@ -111,5 +111,7 @@ const tagCounts = Object.fromEntries(
 		.tag-navigation { margin-top: 0; }
 		.post-list { grid-template-columns: 1fr; }
 		.post-list li.featured { grid-column: auto; }
+		.featured .post-image { height: auto; min-height: 0; }
+		.featured .post-image :global(img) { aspect-ratio: 4 / 3; }
 	}
 </style>
