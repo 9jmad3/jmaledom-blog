@@ -1,0 +1,104 @@
+---
+import { Image } from 'astro:assets';
+import { type CollectionEntry, getCollection } from 'astro:content';
+import BaseHead from '../../../components/BaseHead.astro';
+import Footer from '../../../components/Footer.astro';
+import FormattedDate from '../../../components/FormattedDate.astro';
+import Header from '../../../components/Header.astro';
+import TagList from '../../../components/TagList.astro';
+import { SITE_TITLE } from '../../../consts';
+import { BLOG_TAG_SLUGS, getTagLabel, getTagUrl, type BlogTag } from '../../../lib/tags';
+
+export async function getStaticPaths() {
+	const posts = await getCollection('blog');
+	return BLOG_TAG_SLUGS.map((tag) => ({
+		params: { tag },
+		props: {
+			tag,
+			posts: posts
+				.filter((post) => post.data.tags.includes(tag))
+				.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
+		},
+	}));
+}
+
+interface Props {
+	tag: BlogTag;
+	posts: CollectionEntry<'blog'>[];
+}
+
+const { tag, posts } = Astro.props;
+const label = getTagLabel(tag);
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<BaseHead title={`${label} · ${SITE_TITLE}`} description={`Artículos de jmaledom sobre ${label.toLocaleLowerCase('es')}.`} />
+	</head>
+	<body>
+		<Header />
+		<main class="tag-page">
+			<header class="tag-hero">
+				<p class="eyebrow">Artículos sobre</p>
+				<h1>{label}<span>.</span></h1>
+				<p>{posts.length} {posts.length === 1 ? 'publicación' : 'publicaciones'}</p>
+			</header>
+
+			<nav class="tag-navigation" aria-label="Explorar otras etiquetas">
+				<a href="/blog/">Todo el blog</a>
+				{BLOG_TAG_SLUGS.map((item) => <a href={getTagUrl(item)} aria-current={item === tag ? 'page' : undefined}>{getTagLabel(item)}</a>)}
+			</nav>
+
+			<ul class="post-list">
+				{posts.map((post) => (
+					<li>
+						<article class="post-card">
+							{post.data.heroImage && <a class="post-image" href={`/blog/${post.id}/`} aria-label={`Leer «${post.data.title}»`}><Image width={720} height={540} src={post.data.heroImage} alt={`Portada de «${post.data.title}»`} /></a>}
+							<div class="post-copy">
+								<p class="date"><FormattedDate date={post.data.pubDate} /></p>
+								<TagList tags={post.data.tags} compact />
+								<h2><a href={`/blog/${post.id}/`}>{post.data.title}</a></h2>
+								<p>{post.data.description}</p>
+								<a class="read-more" href={`/blog/${post.id}/`}>Leer publicación →</a>
+							</div>
+						</article>
+					</li>
+				))}
+			</ul>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	.tag-page { width: 960px; padding-top: 5rem; padding-bottom: 4rem; }
+	.tag-hero { margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
+	.eyebrow { margin: 0 0 .5rem; color: var(--accent); font-size: .75rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+	h1 { margin: 0; font-size: clamp(3.6rem, 9vw, 7rem); letter-spacing: -.065em; line-height: .9; }
+	h1 span { color: var(--accent); }
+	.tag-hero > p:last-child { color: var(--muted); font-weight: 700; }
+	.tag-navigation { display: flex; flex-wrap: wrap; gap: .55rem; margin-bottom: 2.5rem; }
+	.tag-navigation a { padding: .4rem .7rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; font-size: .78rem; font-weight: 700; text-decoration: none; }
+	.tag-navigation a:hover, .tag-navigation a[aria-current="page"] { color: white; background: var(--accent); border-color: var(--accent); }
+	.post-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; margin: 0; padding: 0; list-style: none; }
+	.post-list li { margin: 0; }
+	.post-card { position: relative; display: grid; height: 100%; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 22px; transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease; }
+	.post-card:hover { border-color: var(--accent); box-shadow: var(--box-shadow); transform: translateY(-4px); }
+	.post-image { display: block; overflow: hidden; }
+	.post-image :global(img) { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; object-position: center top; border-radius: 0; transition: transform .3s ease; }
+	.post-card:hover .post-image :global(img) { transform: scale(1.025); }
+	.post-copy { display: flex; padding: 1.5rem; flex-direction: column; }
+	.date { margin: 0 0 .7rem; color: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+	h2 { margin: 0 0 .85rem; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.045em; line-height: 1; }
+	h2 a { color: var(--text); text-decoration: none; }
+	h2 a::after { position: absolute; inset: 0; content: ''; }
+	h2 a:hover { color: var(--accent); }
+	.post-copy :global(.tag-list) { position: relative; z-index: 1; }
+	.post-copy > p:not(.date) { color: var(--muted); }
+	.read-more { margin-top: auto; padding-top: .75rem; color: var(--accent); font-weight: 700; text-decoration: none; }
+	@media (max-width: 700px) {
+		.tag-page { padding-top: 3rem; }
+		.post-list { grid-template-columns: 1fr; }
+	}
+</style>

@@ -1,0 +1,23 @@
+---
+import { getTagLabel, getTagUrl, type BlogTag } from '../lib/tags';
+
+interface Props {
+	tags: BlogTag[];
+	compact?: boolean;
+}
+
+const { tags, compact = false } = Astro.props;
+---
+
+<ul class:list={['tag-list', { compact }]} aria-label="Etiquetas del artículo">
+	{tags.map((tag) => <li><a href={getTagUrl(tag)}>{getTagLabel(tag)}</a></li>)}
+</ul>
+
+<style>
+	.tag-list { display: flex; flex-wrap: wrap; justify-content: center; gap: .45rem; margin: .75rem 0 1rem; padding: 0; list-style: none; }
+	.tag-list li { margin: 0; }
+	.tag-list a { display: inline-flex; padding: .3rem .65rem; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; font-size: .72rem; font-weight: 700; line-height: 1.2; text-decoration: none; }
+	.tag-list a:hover { color: var(--accent); border-color: var(--accent); }
+	.tag-list.compact { justify-content: flex-start; margin: 0 0 .8rem; }
+	.tag-list.compact a { padding: .25rem .55rem; font-size: .67rem; }
+</style>

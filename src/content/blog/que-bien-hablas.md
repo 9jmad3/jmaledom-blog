@@ -3,6 +3,7 @@ title: 'Qué bien hablas para lo loquillo que estás'
 description: 'Sobre las versiones que mostramos en cada contexto, las etiquetas que ponemos a los demás y todo lo que dejamos fuera cuando creemos conocer a alguien.'
 pubDate: '2026-07-20'
 heroImage: '../../assets/que-bien-hablas.webp'
+tags: ['identidad', 'percepcion']
 ---
 
 Desde que empecé este blog, varias personas me han escrito por Instagram para decirme que les habían gustado los artículos.
