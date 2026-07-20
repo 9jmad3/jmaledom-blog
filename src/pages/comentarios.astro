@@ -202,7 +202,7 @@ import Header from '../components/Header.astro';
 			summary: { totalViews: number; views30Days: number; readers30Days: number; viewsToday: number; averageSeconds: number; completionRate: number };
 			daily: { date: string; views: number }[];
 			articles: { articleSlug: string; views: number; readers: number; averageSeconds: number; completionRate: number; comments: number; reactions: number }[];
-			cloudflare: { available: boolean; error?: string; from?: string; to?: string; pageViews?: number; visits?: number; topArticles?: { path: string; pageViews: number; visits: number }[] };
+			cloudflare: { available: boolean; error?: string; detail?: string; from?: string; to?: string; pageViews?: number; visits?: number; topArticles?: { path: string; pageViews: number; visits: number }[] };
 		};
 		if (data.cloudflare.available) {
 			const heading = document.createElement('div'); heading.className = 'history-heading';
@@ -219,7 +219,7 @@ import Header from '../components/Header.astro';
 			cloudflareHistory.replaceChildren(heading, paths);
 		} else {
 			cloudflareHistory.classList.add('is-error');
-			cloudflareHistory.textContent = data.cloudflare.error ?? 'Histórico de Cloudflare no disponible.';
+			cloudflareHistory.textContent = [data.cloudflare.error ?? 'Histórico de Cloudflare no disponible.', data.cloudflare.detail].filter(Boolean).join(' ');
 		}
 		const metrics = [
 			['Visitas (30 días)', data.summary.views30Days],

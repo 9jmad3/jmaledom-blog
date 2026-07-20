@@ -39,7 +39,11 @@ async function getCloudflareHistory() {
 		};
 	} catch (error) {
 		console.error('No se pudo consultar Cloudflare Web Analytics:', error);
-		return { available: false, error: 'No se ha podido consultar el histórico de Cloudflare.' };
+		return {
+			available: false,
+			error: 'No se ha podido consultar el histórico de Cloudflare.',
+			detail: process.env.SITE_ENVIRONMENT === 'staging' && error instanceof Error ? error.message : undefined,
+		};
 	}
 }
 
