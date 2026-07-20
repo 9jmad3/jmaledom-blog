@@ -1,0 +1,39 @@
+---
+interface Props { article: string }
+const { article } = Astro.props;
+---
+
+<script is:inline define:vars={{ article }}>
+	(() => {
+		if (!article || !crypto.randomUUID || navigator.webdriver) return;
+		const sessionId = crypto.randomUUID();
+		let engagedSeconds = 0;
+		let maxScroll = 0;
+		let lastTick = Date.now();
+		let lastSent = 0;
+
+		const isActive = () => document.visibilityState === 'visible' && document.hasFocus();
+		const update = () => {
+			const now = Date.now();
+			if (isActive()) engagedSeconds = Math.min(3600, engagedSeconds + Math.min(5, Math.round((now - lastTick) / 1000)));
+			lastTick = now;
+			const available = document.documentElement.scrollHeight - innerHeight;
+			maxScroll = Math.max(maxScroll, available > 0 ? Math.min(100, Math.round((scrollY / available) * 100)) : 100);
+		};
+
+		const payload = () => JSON.stringify({ sessionId, article, engagedSeconds, maxScroll, completed: maxScroll >= 90 && engagedSeconds >= 20 });
+		const send = (beacon = false) => {
+			update();
+			if (engagedSeconds < 5 || engagedSeconds === lastSent) return;
+			lastSent = engagedSeconds;
+			if (beacon && navigator.sendBeacon) navigator.sendBeacon('/api/analytics/reading', new Blob([payload()], { type: 'application/json' }));
+			else fetch('/api/analytics/reading', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload(), keepalive: true }).catch(() => {});
+		};
+
+		addEventListener('scroll', update, { passive: true });
+		addEventListener('focus', () => { lastTick = Date.now(); });
+		document.addEventListener('visibilitychange', () => document.hidden ? send(true) : lastTick = Date.now());
+		addEventListener('pagehide', () => send(true));
+		setInterval(() => { update(); if (engagedSeconds >= 5 && engagedSeconds - lastSent >= 15) send(); }, 5000);
+	})();
+</script>

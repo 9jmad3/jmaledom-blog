@@ -10,6 +10,7 @@ import Comments from '../components/Comments.astro';
 import Reactions from '../components/Reactions.astro';
 import TagList from '../components/TagList.astro';
 import type { BlogTag } from '../lib/tags';
+import ReadingAnalytics from '../components/ReadingAnalytics.astro';
 
 type PostLink = { id: string; title: string };
 type Props = CollectionEntry<'blog'>['data'] & {
@@ -121,5 +122,6 @@ const articleSlug = Astro.url.pathname.split('/').filter(Boolean).at(-1) ?? '';
 			</article>
 		</main>
 		<Footer />
+		<ReadingAnalytics article={articleSlug} />
 	</body>
 </html>
