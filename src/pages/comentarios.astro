@@ -21,6 +21,12 @@ import Header from '../components/Header.astro';
 			</div>
 			<p data-admin-message>Inicia sesión con la cuenta configurada como administradora.</p>
 			<section class="dashboard" data-dashboard hidden>
+				<section class="analytics-panel" aria-labelledby="analytics-title">
+					<div class="section-heading"><div><p class="eyebrow">Últimos 30 días</p><h2 id="analytics-title">Resumen del blog</h2></div><span class="analytics-note">Desde la activación de las métricas</span></div>
+					<div class="metric-grid" data-metric-grid aria-live="polite"><p>Cargando métricas…</p></div>
+					<div class="chart-card"><h3>Visitas diarias</h3><div class="daily-chart" data-daily-chart></div></div>
+					<div class="articles-card"><h3>Rendimiento por artículo</h3><div class="article-metrics" data-article-metrics></div></div>
+				</section>
 				<div class="status-tabs" role="tablist" aria-label="Estado de los comentarios">
 					<button class="status-tab is-active" type="button" data-status="pending">Pendientes <span data-count="pending">0</span></button>
 					<button class="status-tab" type="button" data-status="published">Publicados <span data-count="published">0</span></button>
@@ -49,6 +55,9 @@ import Header from '../components/Header.astro';
 	const search = document.querySelector<HTMLInputElement>('[data-search]')!;
 	const articleFilter = document.querySelector<HTMLSelectElement>('[data-article-filter]')!;
 	const summary = document.querySelector<HTMLElement>('[data-results-summary]')!;
+	const metricGrid = document.querySelector<HTMLElement>('[data-metric-grid]')!;
+	const dailyChart = document.querySelector<HTMLElement>('[data-daily-chart]')!;
+	const articleMetrics = document.querySelector<HTMLElement>('[data-article-metrics]')!;
 	let comments: ModerationComment[] = [];
 	let activeStatus: Status = 'pending';
 
@@ -176,6 +185,52 @@ import Header from '../components/Header.astro';
 		message.textContent = '';
 		dashboard.hidden = false;
 		render();
+		loadAnalytics();
+	}
+
+	function formatDuration(seconds: number) {
+		if (!seconds) return '—';
+		return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} min`;
+	}
+
+	async function loadAnalytics() {
+		const response = await fetch('/api/analytics/summary');
+		if (!response.ok) { metricGrid.innerHTML = '<p>No se han podido cargar las métricas.</p>'; return; }
+		const data = await response.json() as {
+			summary: { totalViews: number; views30Days: number; readers30Days: number; viewsToday: number; averageSeconds: number; completionRate: number };
+			daily: { date: string; views: number }[];
+			articles: { articleSlug: string; views: number; readers: number; averageSeconds: number; completionRate: number; comments: number; reactions: number }[];
+		};
+		const metrics = [
+			['Visitas (30 días)', data.summary.views30Days],
+			['Lectores aproximados', data.summary.readers30Days],
+			['Visitas hoy', data.summary.viewsToday],
+			['Tiempo medio activo', formatDuration(data.summary.averageSeconds)],
+			['Lecturas completas', `${data.summary.completionRate}%`],
+			['Visitas acumuladas', data.summary.totalViews],
+		];
+		metricGrid.replaceChildren(...metrics.map(([label, value]) => {
+			const card = document.createElement('article');
+			const strong = document.createElement('strong'); strong.textContent = String(value);
+			const span = document.createElement('span'); span.textContent = String(label);
+			card.append(strong, span); return card;
+		}));
+		const maxViews = Math.max(1, ...data.daily.map((day) => day.views));
+		dailyChart.replaceChildren(...data.daily.map((day) => {
+			const bar = document.createElement('span');
+			bar.style.height = `${Math.max(3, (day.views / maxViews) * 100)}%`;
+			bar.title = `${new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' }).format(new Date(`${day.date}T12:00:00`))}: ${day.views} visitas`;
+			bar.setAttribute('aria-label', bar.title);
+			return bar;
+		}));
+		if (!data.articles.length) { articleMetrics.innerHTML = '<p>Aún no hay lecturas registradas.</p>'; return; }
+		articleMetrics.replaceChildren(...data.articles.map((article) => {
+			const row = document.createElement('article');
+			const link = document.createElement('a'); link.href = `/blog/${article.articleSlug}/`; link.textContent = article.articleSlug; link.target = '_blank';
+			const stats = document.createElement('p');
+			stats.textContent = `${article.views} visitas · ${article.readers} lectores · ${formatDuration(article.averageSeconds)} · ${article.completionRate}% completas · ${article.comments} comentarios · ${article.reactions} reacciones`;
+			row.append(link, stats); return row;
+		}));
 	}
 	load();
 </script>
@@ -189,6 +244,23 @@ import Header from '../components/Header.astro';
 	button { padding: .7rem 1rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; cursor: pointer; }
 	button:disabled { cursor: wait; opacity: .55; }
 	.dashboard { margin-top: 2rem; }
+	.analytics-panel { margin-bottom: 3rem; }
+	.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+	.section-heading h2 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.5rem); }
+	.analytics-note { color: rgb(var(--gray)); font-size: .75rem; }
+	.metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+	.metric-grid :global(article), .chart-card, .articles-card { padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+	.metric-grid :global(article) { display: flex; min-height: 92px; flex-direction: column; justify-content: space-between; }
+	.metric-grid :global(strong) { font-size: 1.65rem; line-height: 1; }
+	.metric-grid :global(span) { color: rgb(var(--gray)); font-size: .75rem; }
+	.chart-card, .articles-card { margin-top: .75rem; }
+	.chart-card h3, .articles-card h3 { margin: 0 0 1rem; font-size: 1rem; }
+	.daily-chart { display: flex; height: 120px; align-items: end; gap: 4px; }
+	.daily-chart :global(span) { min-width: 3px; flex: 1; background: var(--accent); border-radius: 3px 3px 0 0; opacity: .8; }
+	.article-metrics { display: grid; gap: .8rem; }
+	.article-metrics :global(article + article) { padding-top: .8rem; border-top: 1px solid var(--border); }
+	.article-metrics :global(a) { color: var(--text); font-weight: 800; text-decoration: none; }
+	.article-metrics :global(p) { margin: .3rem 0 0; color: rgb(var(--gray)); font-size: .78rem; line-height: 1.5; }
 	.status-tabs { display: flex; gap: .65rem; overflow-x: auto; padding-bottom: .35rem; }
 	.status-tab { flex: 0 0 auto; font-weight: 700; }
 	.status-tab span { display: inline-grid; min-width: 1.55rem; min-height: 1.55rem; margin-left: .35rem; place-items: center; background: var(--background); border-radius: 999px; font-size: .72rem; }
@@ -210,5 +282,5 @@ import Header from '../components/Header.astro';
 	.comment-list :global(.danger-action) { color: #a32a20; border-color: color-mix(in srgb, #a32a20 35%, var(--border)); }
 	.comment-list :global(.empty-state) { padding: 2rem; color: rgb(var(--gray)); text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: 16px; }
 	[hidden] { display: none !important; }
-	@media (max-width: 640px) { .moderation-heading { align-items: start; flex-direction: column; } .filters { grid-template-columns: 1fr; } }
+	@media (max-width: 640px) { .moderation-heading, .section-heading { align-items: start; flex-direction: column; } .filters { grid-template-columns: 1fr; } .metric-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
