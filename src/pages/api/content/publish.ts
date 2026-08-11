@@ -30,7 +30,11 @@ async function requireAdmin(request: Request) {
 
 export const GET: APIRoute = async ({ request }) => {
 	if (!(await requireAdmin(request))) return json({ error: 'No autorizado.' }, 403);
-	return json({ configured: Boolean(process.env.DATABASE_URL), storage: 'Railway PostgreSQL + Volume' });
+	if (!process.env.DATABASE_URL) return json({ configured: false, storage: 'Railway PostgreSQL + Volume', items: [] });
+	const result = await requireDatabase().query(`SELECT id, section, slug, title, description, body_markdown AS "bodyMarkdown",
+		tags, details, image_path AS "imagePath", status, to_char(published_at, 'YYYY-MM-DD') AS "publishedAt",
+		created_at AS "createdAt", updated_at AS "updatedAt" FROM content_items ORDER BY updated_at DESC`);
+	return json({ configured: true, storage: 'Railway PostgreSQL + Volume', items: result.rows });
 };
 
 function details(section: Section, data: FormData) {
@@ -46,6 +50,8 @@ export const POST: APIRoute = async ({ request }) => {
 		if (!(await requireAdmin(request))) return json({ error: 'No autorizado.' }, 403);
 		if (!process.env.DATABASE_URL) return json({ error: 'La base de datos no está configurada.' }, 503);
 		const data = await request.formData();
+		const intent = text(data, 'intent') || 'published';
+		const editingId = Number(text(data, 'id')) || null;
 		const section = text(data, 'section') as Section;
 		const slug = text(data, 'slug');
 		const title = text(data, 'title');
@@ -53,27 +59,29 @@ export const POST: APIRoute = async ({ request }) => {
 		const bodyMarkdown = text(data, 'body');
 		const tags = list(text(data, 'tags'));
 		const publishedAt = text(data, 'pubDate');
+		if (!['preview', 'draft', 'published'].includes(intent)) return json({ error: 'Acción no válida.' }, 400);
 		if (!(section in sectionLabels)) return json({ error: 'Sección no válida.' }, 400);
 		if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 90) return json({ error: 'El slug no es válido.' }, 400);
 		if (title.length < 3 || title.length > 120) return json({ error: 'Revisa el título.' }, 400);
-		if (description.length < 20 || description.length > 260) return json({ error: 'La descripción debe tener entre 20 y 260 caracteres.' }, 400);
+		const requiresCompleteContent = intent !== 'draft';
+		if (requiresCompleteContent && (description.length < 20 || description.length > 260)) return json({ error: 'La descripción debe tener entre 20 y 260 caracteres.' }, 400);
 		if (!/^\d{4}-\d{2}-\d{2}$/.test(publishedAt)) return json({ error: 'La fecha no es válida.' }, 400);
-		if (bodyMarkdown.length < 40) return json({ error: 'El contenido es demasiado corto.' }, 400);
-		if (!tags.length || tags.length > 5) return json({ error: 'Añade entre una y cinco etiquetas.' }, 400);
-		if (section === 'recetas' && (!number(data, 'time') || !number(data, 'servings') || !['Fácil', 'Media', 'Elaborada'].includes(text(data, 'difficulty'))))
+		if (requiresCompleteContent && bodyMarkdown.length < 40) return json({ error: 'El contenido es demasiado corto.' }, 400);
+		if (requiresCompleteContent && (!tags.length || tags.length > 5)) return json({ error: 'Añade entre una y cinco etiquetas.' }, 400);
+		if (requiresCompleteContent && section === 'recetas' && (!number(data, 'time') || !number(data, 'servings') || !['Fácil', 'Media', 'Elaborada'].includes(text(data, 'difficulty'))))
 			return json({ error: 'Revisa el tiempo, las raciones y la dificultad.' }, 400);
-		if (section === 'entrenos' && (!number(data, 'duration') || !['Inicial', 'Intermedio', 'Avanzado'].includes(text(data, 'level')) || !text(data, 'goal') || !list(text(data, 'equipment')).length))
+		if (requiresCompleteContent && section === 'entrenos' && (!number(data, 'duration') || !['Inicial', 'Intermedio', 'Avanzado'].includes(text(data, 'level')) || !text(data, 'goal') || !list(text(data, 'equipment')).length))
 			return json({ error: 'Revisa la duración, el nivel, el objetivo y el material.' }, 400);
-		if (section === 'estilo' && (!text(data, 'occasion') || !text(data, 'season') || !list(text(data, 'palette')).length || !list(text(data, 'pieces')).length))
+		if (requiresCompleteContent && section === 'estilo' && (!text(data, 'occasion') || !text(data, 'season') || !list(text(data, 'palette')).length || !list(text(data, 'pieces')).length))
 			return json({ error: 'Revisa la ocasión, la temporada, la paleta y las prendas.' }, 400);
 		const database = requireDatabase();
-		const duplicate = await database.query('SELECT 1 FROM content_items WHERE section = $1 AND slug = $2', [section, slug]);
+		const duplicate = await database.query('SELECT 1 FROM content_items WHERE section = $1 AND slug = $2 AND ($3::bigint IS NULL OR id <> $3)', [section, slug, editingId]);
 		const staticEntry = await getEntry(section, slug);
 		if (duplicate.rowCount || staticEntry) return json({ error: 'Ya existe contenido con ese slug.' }, 409);
 
 		const image = data.get('image');
 		let imageName: string | null = null;
-		if (image instanceof File && image.size) {
+		if (intent !== 'preview' && image instanceof File && image.size) {
 			if (image.size > 8 * 1024 * 1024) return json({ error: 'La imagen no puede superar 8 MB.' }, 400);
 			if (!['image/jpeg', 'image/png', 'image/webp'].includes(image.type)) return json({ error: 'La imagen debe ser JPG, PNG o WebP.' }, 400);
 			await mkdir(uploadsDirectory(), { recursive: true });
@@ -85,13 +93,24 @@ export const POST: APIRoute = async ({ request }) => {
 			await rename(temporaryPath, finalImagePath);
 		}
 
-		const rawHtml = await marked.parse(bodyMarkdown, { async: true });
+		const rawHtml = await marked.parse(bodyMarkdown || '', { async: true });
 		const bodyHtml = sanitizeHtml(rawHtml, { allowedAttributes: { ...sanitizeHtml.defaults.allowedAttributes, a: ['href', 'name', 'target', 'rel'] }, allowedSchemes: ['http', 'https', 'mailto'] });
-		await database.query(`INSERT INTO content_items
-			(section, slug, title, description, body_markdown, body_html, tags, details, image_path, published_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-			[section, slug, title, description, bodyMarkdown, bodyHtml, tags, details(section, data), imageName, publishedAt]);
-		return json({ published: true, storage: 'Railway', previewUrl: `/${section}/${slug}/` });
+		if (intent === 'preview') return json({ preview: true, title, description, section, tags, details: details(section, data), bodyHtml, imageUrl: imageName ? `/uploads/${imageName}` : text(data, 'existingImage') || null });
+		if (editingId) {
+			const current = await database.query('SELECT image_path FROM content_items WHERE id = $1', [editingId]);
+			if (!current.rowCount) return json({ error: 'El contenido ya no existe.' }, 404);
+			const previousImage = current.rows[0].image_path as string | null;
+			await database.query(`UPDATE content_items SET section=$1, slug=$2, title=$3, description=$4, body_markdown=$5,
+				body_html=$6, tags=$7, details=$8, image_path=COALESCE($9,image_path), published_at=$10, status=$11, updated_at=now() WHERE id=$12`,
+				[section, slug, title, description, bodyMarkdown, bodyHtml, tags, details(section, data), imageName, publishedAt, intent, editingId]);
+			if (imageName && previousImage) await unlink(resolve(uploadsDirectory(), previousImage)).catch(() => undefined);
+		} else {
+			await database.query(`INSERT INTO content_items
+				(section, slug, title, description, body_markdown, body_html, tags, details, image_path, published_at, status)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+				[section, slug, title, description, bodyMarkdown, bodyHtml, tags, details(section, data), imageName, publishedAt, intent]);
+		}
+		return json({ saved: true, status: intent, storage: 'Railway', previewUrl: `/${section}/${slug}/` });
 	} catch (error) {
 		if (finalImagePath) await unlink(finalImagePath).catch(() => undefined);
 		console.error('Error al publicar contenido:', error);
