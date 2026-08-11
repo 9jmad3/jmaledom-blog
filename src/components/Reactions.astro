@@ -1,10 +1,10 @@
 ---
-interface Props { article: string; }
-const { article } = Astro.props;
+interface Props { article: string; contentLabel?: string; }
+const { article, contentLabel = 'publicación' } = Astro.props;
 ---
 
 <section class="reactions" data-reactions data-article={article} aria-labelledby="reactions-title">
-	<p id="reactions-title">¿Qué te ha dejado este artículo?</p>
+	<p id="reactions-title">¿Qué te ha parecido esta {contentLabel}?</p>
 	<div class="reaction-options">
 		<button type="button" data-reaction="like" aria-pressed="false"><span aria-hidden="true">♥</span> Me gusta <strong data-count="like">0</strong></button>
 		<button type="button" data-reaction="think" aria-pressed="false"><span aria-hidden="true">💭</span> Me ha hecho pensar <strong data-count="think">0</strong></button>

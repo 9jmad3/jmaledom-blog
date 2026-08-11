@@ -102,6 +102,14 @@ import Header from '../components/Header.astro';
 		}
 	}
 
+	function contentLink(key: string) {
+		if (key.startsWith('receta--')) {
+			const slug = key.slice('receta--'.length);
+			return { href: `/recetas/${slug}/`, label: `Receta · ${slug}` };
+		}
+		return { href: `/blog/${key}/`, label: key };
+	}
+
 	function createComment(comment: ModerationComment) {
 		const item = document.createElement('article');
 		item.className = 'moderation-comment';
@@ -110,8 +118,9 @@ import Header from '../components/Header.astro';
 		const meta = document.createElement('div');
 		meta.className = 'comment-meta';
 		const article = document.createElement('a');
-		article.href = `/blog/${comment.articleSlug}/`;
-		article.textContent = comment.articleSlug;
+		const target = contentLink(comment.articleSlug);
+		article.href = target.href;
+		article.textContent = target.label;
 		article.target = '_blank';
 		article.rel = 'noopener';
 		const date = document.createElement('time');
@@ -181,7 +190,7 @@ import Header from '../components/Header.astro';
 		for (const slug of [...new Set(comments.map((comment) => comment.articleSlug))].sort()) {
 			const option = document.createElement('option');
 			option.value = slug;
-			option.textContent = slug;
+			option.textContent = contentLink(slug).label;
 			articleFilter.append(option);
 		}
 		message.textContent = '';

@@ -1,19 +1,14 @@
 import { createHmac } from 'node:crypto';
 import type { APIRoute } from 'astro';
-import { getCollection } from 'astro:content';
 import { getViewer, isTrustedRequest, json } from '../../lib/comments';
 import { requireDatabase } from '../../lib/db';
+import { interactionTargetExists } from '../../lib/interaction-target';
 
 export const prerender = false;
 
-const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const visitorPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const reactions = ['like', 'think', 'relate'] as const;
 type Reaction = typeof reactions[number];
-
-async function articleExists(slug: string) {
-	return (await getCollection('blog')).some((post) => post.id === slug);
-}
 
 function visitorHash(value: string) {
 	const secret = process.env.COMMENT_IP_SECRET ?? process.env.BETTER_AUTH_SECRET;
@@ -31,7 +26,7 @@ async function getIdentity(request: Request, visitorId: string) {
 export const GET: APIRoute = async ({ url, request }) => {
 	const article = url.searchParams.get('article')?.trim() ?? '';
 	const visitorId = url.searchParams.get('visitor')?.trim() ?? '';
-	if (!slugPattern.test(article) || !(await articleExists(article))) return json({ error: 'Artículo no válido.' }, 400);
+	if (!(await interactionTargetExists(article))) return json({ error: 'Contenido no válido.' }, 400);
 
 	const identity = await getIdentity(request, visitorId);
 	const result = await requireDatabase().query(
@@ -57,7 +52,7 @@ export const POST: APIRoute = async ({ request }) => {
 	const article = input?.article?.trim() ?? '';
 	const reaction = input?.reaction ?? null;
 	const visitorId = input?.visitorId?.trim() ?? '';
-	if (!slugPattern.test(article) || !(await articleExists(article))) return json({ error: 'Artículo no válido.' }, 400);
+	if (!(await interactionTargetExists(article))) return json({ error: 'Contenido no válido.' }, 400);
 	if (reaction !== null && !reactions.includes(reaction as Reaction)) return json({ error: 'Reacción no válida.' }, 400);
 	const identity = await getIdentity(request, visitorId);
 	if (!identity) return json({ error: 'No se ha podido guardar la reacción.' }, 400);

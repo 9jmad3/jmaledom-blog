@@ -1,20 +1,13 @@
 import type { APIRoute } from 'astro';
-import { getCollection } from 'astro:content';
 import { COMMENT_MAX_LENGTH, getAdminEmails, getClientIp, getViewer, hashIp, isAdmin, isTrustedRequest, json, moderateComment, verifyTurnstile } from '../../../lib/comments';
 import { requireDatabase } from '../../../lib/db';
+import { interactionTargetExists } from '../../../lib/interaction-target';
 
 export const prerender = false;
 
-const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-async function articleExists(slug: string) {
-	return (await getCollection('blog')).some((post) => post.id === slug);
-}
-
 export const GET: APIRoute = async ({ url, request }) => {
 	const article = url.searchParams.get('article')?.trim() ?? '';
-	if (!slugPattern.test(article)) return json({ error: 'Artículo no válido.' }, 400);
-	if (!(await articleExists(article))) return json({ error: 'El artículo no existe.' }, 404);
+	if (!(await interactionTargetExists(article))) return json({ error: 'El contenido no existe.' }, 404);
 	const viewer = await getViewer(request);
 
 	const result = await requireDatabase().query(
@@ -45,8 +38,7 @@ export const POST: APIRoute = async (context) => {
 	const honeypot = String(input.website ?? '').trim();
 	const turnstileToken = String(input.turnstileToken ?? '');
 	if (honeypot) return json({ error: 'No se ha podido publicar el comentario.' }, 400);
-	if (!slugPattern.test(article)) return json({ error: 'Artículo no válido.' }, 400);
-	if (!(await articleExists(article))) return json({ error: 'El artículo no existe.' }, 404);
+	if (!(await interactionTargetExists(article))) return json({ error: 'El contenido no existe.' }, 404);
 	if (body.length < 2 || body.length > COMMENT_MAX_LENGTH) {
 		return json({ error: `El comentario debe tener entre 2 y ${COMMENT_MAX_LENGTH} caracteres.` }, 400);
 	}
