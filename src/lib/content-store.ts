@@ -1,6 +1,7 @@
 import { requireDatabase } from './db';
 
 export type ContentSection = 'recetas' | 'entrenos' | 'estilo';
+const hiddenContent = new Set(['recetas/prueba-del-nuevo-panel']);
 
 export interface StoredContent {
 	id: number;
@@ -44,10 +45,11 @@ export async function listStoredContent(section: ContentSection) {
 		FROM content_items WHERE section = $1 AND status = 'published'
 		ORDER BY published_at DESC, created_at DESC
 	`, [section]);
-	return result.rows.map(mapRow);
+	return result.rows.map(mapRow).filter((item) => !hiddenContent.has(`${item.section}/${item.slug}`));
 }
 
 export async function getStoredContent(section: ContentSection, slug: string) {
+	if (hiddenContent.has(`${section}/${slug}`)) return null;
 	if (!process.env.DATABASE_URL) return null;
 	const result = await requireDatabase().query<ContentRow>(`
 		SELECT id, section, slug, title, description, body_markdown, body_html, tags, details, image_path, published_at
