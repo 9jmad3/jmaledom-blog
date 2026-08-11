@@ -9,6 +9,9 @@ import { defineConfig, fontProviders } from 'astro/config';
 export default defineConfig({
 	site: process.env.SITE_URL ?? 'https://www.jmaledom.es',
 	adapter: node({ mode: 'standalone' }),
+	// State-changing API routes validate their public origin explicitly. Railway's proxy
+	// otherwise makes Astro reject legitimate multipart uploads before they reach the route.
+	security: { checkOrigin: false },
 	integrations: [mdx(), sitemap({ filter: (page) => !page.endsWith('/comentarios/') && !page.includes('/admin/') })],
 	fonts: [
 		{
