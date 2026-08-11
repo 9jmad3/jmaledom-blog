@@ -9,7 +9,7 @@ import { defineConfig, fontProviders } from 'astro/config';
 export default defineConfig({
 	site: process.env.SITE_URL ?? 'https://www.jmaledom.es',
 	adapter: node({ mode: 'standalone' }),
-	integrations: [mdx(), sitemap({ filter: (page) => !page.endsWith('/comentarios/') })],
+	integrations: [mdx(), sitemap({ filter: (page) => !page.endsWith('/comentarios/') && !page.includes('/admin/') })],
 	fonts: [
 		{
 			provider: fontProviders.local(),

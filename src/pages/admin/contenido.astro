@@ -1,0 +1,135 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Header from '../../components/Header.astro';
+---
+<!doctype html>
+<html lang="es">
+<head><BaseHead title="Publicar contenido · jmaledom" description="Panel privado de publicación."/><meta name="robots" content="noindex,nofollow"/></head>
+<body><Header/><main class="publisher">
+<header><div><p class="eyebrow">Administración</p><h1>Publicar</h1><p>Sube recetas, rutinas y conjuntos sin editar archivos.</p></div><div class="auth"><button type="button" data-login>Entrar con Google</button><button type="button" data-logout hidden>Cerrar sesión</button></div></header>
+<p data-auth-message>Inicia sesión con tu cuenta administradora.</p>
+<form data-publish-form hidden>
+<section class="form-card"><h2>1. Elige el tipo</h2><div class="type-selector">
+<label><input type="radio" name="section" value="recetas" required/><span><strong>Receta</strong><small>Ingredientes y preparación</small></span></label>
+<label><input type="radio" name="section" value="entrenos" required/><span><strong>Entreno</strong><small>Rutina y ejercicios</small></span></label>
+<label><input type="radio" name="section" value="estilo" required/><span><strong>Estilo</strong><small>Conjunto y prendas</small></span></label>
+</div></section>
+<section class="form-card"><h2>2. Información principal</h2><div class="fields two"><label>Título<input name="title" maxlength="120" required placeholder="Un nombre claro"/></label><label>Slug<input name="slug" maxlength="90" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required placeholder="nombre-para-la-url"/></label></div><label>Descripción<textarea name="description" maxlength="260" rows="3" required placeholder="Una frase que explique qué va a encontrar quien entre"></textarea></label><div class="fields two"><label>Fecha<input name="pubDate" type="date" required/></label><label>Etiquetas<input name="tags" required placeholder="rápida, proteica, cena"/><small>Separadas por comas</small></label></div><label>Fotografía principal<input name="image" type="file" accept="image/jpeg,image/png,image/webp"/><small>Opcional · JPG, PNG o WebP · máximo 8 MB</small></label><img class="image-preview" data-image-preview alt="Vista previa" hidden/></section>
+<section class="form-card section-fields" data-fields="recetas" hidden><h2>3. Datos de la receta</h2><div class="fields three"><label>Tiempo (min)<input name="time" type="number" min="1" required/></label><label>Raciones<input name="servings" type="number" min="1" required/></label><label>Dificultad<select name="difficulty" required><option>Fácil</option><option>Media</option><option>Elaborada</option></select></label></div><div class="fields two"><label>Calorías aproximadas<input name="calories" type="number" min="1"/></label><label>Proteína aproximada (g)<input name="protein" type="number" min="0" step="0.1"/></label></div></section>
+<section class="form-card section-fields" data-fields="entrenos" hidden><h2>3. Datos del entreno</h2><div class="fields three"><label>Duración (min)<input name="duration" type="number" min="1" required/></label><label>Nivel<select name="level" required><option>Inicial</option><option>Intermedio</option><option>Avanzado</option></select></label><label>Objetivo<input name="goal" required placeholder="Fuerza e hipertrofia"/></label></div><label>Material<input name="equipment" required placeholder="Mancuernas, banco, poleas"/><small>Separado por comas</small></label></section>
+<section class="form-card section-fields" data-fields="estilo" hidden><h2>3. Datos del conjunto</h2><div class="fields two"><label>Ocasión<input name="occasion" required placeholder="Diario, cena, evento…"/></label><label>Temporada<input name="season" required placeholder="Verano, entretiempo…"/></label></div><label>Paleta de colores<input name="palette" required placeholder="Negro, blanco, gris"/><small>Separada por comas</small></label><label>Prendas<input name="pieces" required placeholder="Camiseta blanca, pantalón negro, zapatillas"/><small>Separadas por comas</small></label></section>
+<section class="form-card"><h2>4. Contenido</h2><label>Texto en Markdown<textarea class="body-editor" name="body" rows="20" required placeholder="Usa títulos con ##, listas con - y pasos numerados."></textarea></label><details><summary>Ayuda rápida de formato</summary><pre>## Título de sección
+
+Texto normal.
+
+- Elemento de una lista
+- Otro elemento
+
+1. Primer paso
+2. Segundo paso</pre></details></section>
+<footer class="publish-actions"><div><strong>Se publicará en la rama de pruebas</strong><small>Railway tardará aproximadamente un minuto en actualizar la web.</small></div><button class="publish-button" type="submit">Publicar contenido</button></footer><p class="publish-status" data-publish-status role="status"></p>
+</form></main>
+<script>
+import { authClient } from '../../lib/auth-client';
+
+const form = document.querySelector<HTMLFormElement>('[data-publish-form]')!;
+const message = document.querySelector<HTMLElement>('[data-auth-message]')!;
+const login = document.querySelector<HTMLButtonElement>('[data-login]')!;
+const logout = document.querySelector<HTMLButtonElement>('[data-logout]')!;
+const status = document.querySelector<HTMLElement>('[data-publish-status]')!;
+const preview = document.querySelector<HTMLImageElement>('[data-image-preview]')!;
+const sectionInputs = document.querySelectorAll<HTMLInputElement>('input[name="section"]');
+const groups = document.querySelectorAll<HTMLElement>('[data-fields]');
+const titleInput = document.querySelector<HTMLInputElement>('input[name="title"]')!;
+const slugInput = document.querySelector<HTMLInputElement>('input[name="slug"]')!;
+const bodyInput = document.querySelector<HTMLTextAreaElement>('textarea[name="body"]')!;
+const dateInput = document.querySelector<HTMLInputElement>('input[name="pubDate"]')!;
+const imageInput = document.querySelector<HTMLInputElement>('input[name="image"]')!;
+
+const starters = {
+  recetas: `## Ingredientes\n\n- Ingrediente\n\n## Preparación\n\n1. Primer paso.\n\n## Un apunte personal\n\nCuenta aquí por qué te gusta esta receta.`,
+  entrenos: `## La rutina\n\n1. **Ejercicio** — 3 series de 10 repeticiones.\n\n## Cómo la hago\n\nAñade aquí tus indicaciones.\n\n## Un apunte personal\n\nCuenta qué te aporta este entreno.`,
+  estilo: `## Las prendas\n\n- **Prenda:** detalle.\n\n## Por qué funciona\n\nExplica las decisiones del conjunto.\n\n## Cómo lo llevaría\n\nAñade variantes o consejos.`,
+};
+
+type Section = keyof typeof starters;
+const slugify = (value: string) => value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+function selectSection(section: Section | '', resetBody = false) {
+  groups.forEach((group) => {
+    const active = group.dataset.fields === section;
+    group.hidden = !active;
+    group.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach((field) => field.disabled = !active);
+  });
+  if (resetBody && section) bodyInput.value = starters[section] ?? '';
+}
+
+async function loadSession() {
+  const session = await authClient.getSession();
+  const configResponse = await fetch('/api/content/publish');
+  if (!session.data?.user || configResponse.status === 401 || configResponse.status === 403) {
+    message.textContent = 'Inicia sesión con tu cuenta administradora.';
+    login.hidden = false;
+    logout.hidden = true;
+    form.hidden = true;
+    return;
+  }
+  const config = await configResponse.json();
+  login.hidden = true;
+  logout.hidden = false;
+  form.hidden = false;
+  message.textContent = config.configured
+    ? `Sesión iniciada. Los cambios irán a ${config.branch}.`
+    : 'El panel está listo, pero falta configurar GITHUB_CONTENT_TOKEN en Railway.';
+  form.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled = !config.configured;
+}
+
+login?.addEventListener('click', () => authClient.signIn.social({ provider: 'google', callbackURL: '/admin/contenido/' }));
+logout?.addEventListener('click', async () => { await authClient.signOut(); location.reload(); });
+sectionInputs.forEach((input) => input.addEventListener('change', () => selectSection(input.value as Section, true)));
+titleInput?.addEventListener('input', () => { if (!slugInput.dataset.edited) slugInput.value = slugify(titleInput.value); });
+slugInput?.addEventListener('input', () => { slugInput.dataset.edited = 'true'; slugInput.value = slugify(slugInput.value); });
+dateInput.valueAsDate = new Date();
+imageInput.addEventListener('change', () => {
+  const file = imageInput.files?.[0];
+  if (!file) { preview.hidden = true; return; }
+  preview.src = URL.createObjectURL(file);
+  preview.hidden = false;
+});
+
+form?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+  button.disabled = true;
+  status.className = 'publish-status';
+  status.textContent = 'Preparando y publicando…';
+  try {
+    const response = await fetch('/api/content/publish', { method: 'POST', body: new FormData(form) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'No se ha podido publicar.');
+    status.classList.add('success');
+    status.replaceChildren(document.createTextNode('Publicado. '));
+    const link = document.createElement('a');
+    link.href = result.githubUrl;
+    link.target = '_blank';
+    link.rel = 'noreferrer';
+    link.textContent = 'Ver el archivo en GitHub';
+    status.append(link);
+    form.reset();
+    slugInput.dataset.edited = '';
+    preview.hidden = true;
+    selectSection('', false);
+    dateInput.valueAsDate = new Date();
+  } catch (error) {
+    status.classList.add('error');
+    status.textContent = error instanceof Error ? error.message : 'No se ha podido publicar.';
+  } finally { button.disabled = false; }
+});
+
+selectSection('', false);
+loadSession();
+</script>
+<style>
+.publisher{width:min(920px,calc(100% - 40px));margin:0 auto;padding:72px 0 120px}.publisher>header{display:flex;justify-content:space-between;align-items:flex-end;gap:32px;margin-bottom:36px}.eyebrow{margin:0 0 8px;color:var(--accent);font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.publisher h1{margin:0;font-size:clamp(3.4rem,9vw,7rem);line-height:.84;letter-spacing:-.07em}.publisher header p:last-child{margin:22px 0 0;color:var(--muted);font-size:1.1rem}.auth{display:flex;gap:10px}.auth button,.publish-button{border:0;border-radius:999px;padding:14px 22px;background:var(--ink);color:var(--paper);font:inherit;font-weight:800;cursor:pointer}.auth button[data-login],.publish-button{background:var(--accent)}[data-auth-message]{padding:18px 20px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.38)}form{display:grid;gap:22px}.form-card{padding:28px;border:1px solid var(--line);border-radius:28px;background:rgba(255,255,255,.48)}.form-card h2{margin:0 0 24px;font-size:1.2rem}.type-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.type-selector label{cursor:pointer}.type-selector input{position:absolute;opacity:0}.type-selector span{display:grid;gap:5px;padding:20px;border:1px solid var(--line);border-radius:18px}.type-selector input:checked+span{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}.type-selector small,.form-card label>small,.publish-actions small{display:block;color:var(--muted)}.fields{display:grid;gap:16px}.fields.two{grid-template-columns:repeat(2,1fr)}.fields.three{grid-template-columns:repeat(3,1fr)}.form-card label{display:block;margin-top:18px;font-weight:750}.form-card input,.form-card textarea,.form-card select{box-sizing:border-box;width:100%;margin-top:8px;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font:inherit}.form-card textarea{resize:vertical}.body-editor{min-height:420px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.55}.image-preview{display:block;width:min(100%,420px);max-height:280px;margin-top:18px;border-radius:18px;object-fit:cover;object-position:top}.form-card details{margin-top:18px;color:var(--muted)}.form-card pre{overflow:auto;padding:16px;border-radius:14px;background:var(--ink);color:var(--paper)}.publish-actions{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:12px 4px}.publish-button:disabled{cursor:not-allowed;opacity:.5}.publish-status{min-height:28px;margin:0;padding:0 4px;font-weight:700}.publish-status.success{color:#14743d}.publish-status.error{color:#b52b1d}.publish-status a{color:inherit;text-decoration:underline}@media(max-width:700px){.publisher{width:min(100% - 28px,920px);padding-top:42px}.publisher>header,.publish-actions{align-items:flex-start;flex-direction:column}.publisher h1{font-size:4rem}.type-selector,.fields.two,.fields.three{grid-template-columns:1fr}.form-card{padding:20px;border-radius:22px}.publish-button{width:100%}}
+</style>
+</body></html>
