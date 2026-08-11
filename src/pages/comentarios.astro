@@ -22,11 +22,11 @@ import Header from '../components/Header.astro';
 			<p data-admin-message>Inicia sesión con la cuenta configurada como administradora.</p>
 			<section class="dashboard" data-dashboard hidden>
 				<section class="analytics-panel" aria-labelledby="analytics-title">
-					<div class="section-heading"><div><p class="eyebrow">Últimos 30 días</p><h2 id="analytics-title">Resumen del blog</h2></div><span class="analytics-note">Desde la activación de las métricas</span></div>
+					<div class="section-heading"><div><p class="eyebrow">Últimos 30 días</p><h2 id="analytics-title">Resumen del sitio</h2></div><span class="analytics-note">Desde la activación de las métricas</span></div>
 					<div class="cloudflare-history" data-cloudflare-history><p>Consultando el histórico de Cloudflare…</p></div>
 					<div class="metric-grid" data-metric-grid aria-live="polite"><p>Cargando métricas…</p></div>
 					<div class="chart-card"><h3>Visitas diarias</h3><div class="daily-chart" data-daily-chart></div></div>
-					<div class="articles-card"><h3>Rendimiento por artículo</h3><div class="article-metrics" data-article-metrics></div></div>
+					<div class="articles-card"><h3>Rendimiento por contenido</h3><div class="article-metrics" data-article-metrics></div></div>
 				</section>
 				<div class="status-tabs" role="tablist" aria-label="Estado de los comentarios">
 					<button class="status-tab is-active" type="button" data-status="pending">Pendientes <span data-count="pending">0</span></button>
@@ -35,7 +35,7 @@ import Header from '../components/Header.astro';
 				</div>
 				<div class="filters">
 					<label><span>Buscar</span><input type="search" data-search placeholder="Nombre o contenido…" autocomplete="off" /></label>
-					<label><span>Artículo</span><select data-article-filter><option value="">Todos los artículos</option></select></label>
+					<label><span>Contenido</span><select data-article-filter><option value="">Todo el contenido</option></select></label>
 				</div>
 				<p class="results-summary" data-results-summary></p>
 				<div class="comment-list" data-comment-list></div>
@@ -221,7 +221,8 @@ import Header from '../components/Header.astro';
 			const paths = document.createElement('div'); paths.className = 'history-paths';
 			for (const article of data.cloudflare.topArticles ?? []) {
 				const row = document.createElement('p');
-				const link = document.createElement('a'); link.href = article.path; link.textContent = article.path.split('/').filter(Boolean).at(-1) ?? article.path; link.target = '_blank';
+				const slug = article.path.split('/').filter(Boolean).at(-1) ?? article.path;
+				const link = document.createElement('a'); link.href = article.path; link.textContent = `${article.path.startsWith('/recetas/') ? 'Receta' : 'Artículo'} · ${slug}`; link.target = '_blank';
 				const value = document.createElement('span'); value.textContent = `${article.pageViews} vistas · ${article.visits} visitas`;
 				row.append(link, value); paths.append(row);
 			}
@@ -255,7 +256,8 @@ import Header from '../components/Header.astro';
 		if (!data.articles.length) { articleMetrics.innerHTML = '<p>Aún no hay lecturas registradas.</p>'; return; }
 		articleMetrics.replaceChildren(...data.articles.map((article) => {
 			const row = document.createElement('article');
-			const link = document.createElement('a'); link.href = `/blog/${article.articleSlug}/`; link.textContent = article.articleSlug; link.target = '_blank';
+			const target = contentLink(article.articleSlug);
+			const link = document.createElement('a'); link.href = target.href; link.textContent = target.label; link.target = '_blank';
 			const stats = document.createElement('p');
 			stats.textContent = `${article.views} visitas · ${article.readers} lectores · ${formatDuration(article.averageSeconds)} · ${article.completionRate}% completas · ${article.comments} comentarios · ${article.reactions} reacciones`;
 			row.append(link, stats); return row;

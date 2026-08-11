@@ -56,7 +56,7 @@ async function getCloudflareHistory() {
 			pageViews,
 			visits,
 			topArticles: [...paths.entries()]
-				.filter(([path]) => /^\/blog\/[^/]+\/$/.test(path))
+				.filter(([path]) => /^\/(blog|recetas)\/[^/]+\/$/.test(path))
 				.map(([path, totals]) => ({ path, ...totals }))
 				.sort((a, b) => b.pageViews - a.pageViews)
 				.slice(0, 10),

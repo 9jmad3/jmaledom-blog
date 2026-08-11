@@ -5,6 +5,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Comments from '../components/Comments.astro';
 import Reactions from '../components/Reactions.astro';
+import ReadingAnalytics from '../components/ReadingAnalytics.astro';
 interface Props { title:string; description:string; section:string; backHref:string; heroImage?:any; facts:{label:string;value:string}[]; tags:string[]; note?:string; interactionKey?:string }
 const { title, description, section, backHref, heroImage, facts, tags, note, interactionKey } = Astro.props;
 ---
@@ -14,7 +15,7 @@ const { title, description, section, backHref, heroImage, facts, tags, note, int
 	<div class="facts">{facts.map((fact)=><div><small>{fact.label}</small><strong>{fact.value}</strong></div>)}</div><div class="tags">{tags.map((tag)=><span>{tag}</span>)}</div>
 	{note && <p class="note">{note}</p>}<article class="content"><slot /></article>
 	{interactionKey && <div class="interaction"><Reactions article={interactionKey} contentLabel="receta" /><Comments article={interactionKey} /></div>}
-</main><Footer /></body></html>
+</main><Footer />{interactionKey && <ReadingAnalytics article={interactionKey} />}</body></html>
 <style>
 	.guide{width:min(820px,calc(100% - 2rem));padding-top:4rem}.back{color:var(--muted);font-size:.85rem;font-weight:700;text-decoration:none}.intro{margin:2.5rem 0}.eyebrow{margin:0;color:var(--accent);font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.intro h1{max-width:780px;margin:.35rem 0 1rem;font-size:clamp(3rem,8vw,6rem);letter-spacing:-.06em;line-height:.92}.intro>p:last-child{max-width:680px;color:var(--muted);font-size:1.15rem}.hero{overflow:hidden;margin-bottom:1.5rem;border-radius:22px}.hero :global(img){display:block;width:100%;max-height:620px;object-fit:cover;border-radius:0}.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin:1.5rem 0}.facts div{display:flex;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:14px;flex-direction:column}.facts small{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em}.facts strong{font-size:1.05rem}.tags{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.5rem}.tags span{padding:.25rem .65rem;background:var(--surface);border:1px solid var(--border);border-radius:999px;font-size:.75rem;font-weight:700}.note{padding:1rem;color:var(--muted);background:color-mix(in srgb,var(--accent) 7%,var(--surface));border-left:3px solid var(--accent);border-radius:0 12px 12px 0;font-size:.88rem}.content{margin-top:3rem}.content :global(h2){margin-top:2.5rem;font-size:2rem}.content :global(li){margin-bottom:.45rem}.content :global(table){display:block;overflow-x:auto;border-collapse:collapse}.content :global(th),.content :global(td){padding:.6rem;border-bottom:1px solid var(--border);text-align:left}
 </style>
