@@ -27,16 +27,13 @@ const areas = [
 	</body>
 </html>
 <style>
-	.home.home { width: min(1440px, calc(100% - 3rem)); }
 	.home .hero { max-width: none; }
 	.home .hero h1 { max-width: none; }
 	.home .areas { margin-top: 7rem; }
-	.home .area-grid { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+	.home .area-grid { grid-template-columns: 1fr; }
 	.home .latest-link { display: grid; grid-template-columns: auto minmax(0, 1fr); font-size: .9rem; }
-	.home .latest-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.home .latest-link span { white-space: nowrap; }
 	@media (max-width: 720px) {
-		.home.home { width: min(100% - 2rem, 1440px); }
-		.home .area-grid { grid-template-columns: 1fr; }
 		.home .latest-link span { white-space: normal; }
 	}
 </style>
