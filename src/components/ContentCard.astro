@@ -4,7 +4,7 @@ interface Props { href: string; title: string; description: string; eyebrow: str
 const { href, title, description, eyebrow, meta, image, tone } = Astro.props;
 ---
 <a class={`content-card ${tone}`} {href}>
-	<div class="visual">{image ? <Image src={image} alt="" width={720} height={520} /> : <span aria-hidden="true">{tone === 'food' ? 'RECETA' : tone === 'training' ? 'RUTINA' : 'LOOK'}</span>}</div>
+	<div class="visual">{image ? (typeof image === 'string' ? <img src={image} alt="" width="720" height="520" loading="lazy" /> : <Image src={image} alt="" width={720} height={520} />) : <span aria-hidden="true">{tone === 'food' ? 'RECETA' : tone === 'training' ? 'RUTINA' : 'LOOK'}</span>}</div>
 	<div class="copy"><p class="eyebrow">{eyebrow}</p><h2>{title}</h2><p>{description}</p><small>{meta}</small></div>
 </a>
 <style>

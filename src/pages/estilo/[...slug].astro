@@ -1,5 +1,5 @@
 ---
-import { getCollection, render } from 'astro:content'; import GuideLayout from '../../layouts/GuideLayout.astro';
-export async function getStaticPaths(){return (await getCollection('estilo')).map((entry)=>({params:{slug:entry.id},props:{entry}}))} const {entry}=Astro.props; const {Content}=await render(entry); const d=entry.data;
+import { getEntry, render } from 'astro:content'; import GuideLayout from '../../layouts/GuideLayout.astro'; import { getStoredContent } from '../../lib/content-store';
+export const prerender=false; const slug=Astro.params.slug!; const stored=await getStoredContent('estilo',slug); const entry=stored?null:await getEntry('estilo',slug); if(!stored&&!entry)return Astro.redirect('/404'); const rendered=entry?await render(entry):null; const d:any=stored?{...stored.details,title:stored.title,description:stored.description,tags:stored.tags,heroImage:stored.imagePath}:entry!.data;
 ---
-<GuideLayout title={d.title} description={d.description} section="Estilo" backHref="/estilo" heroImage={d.heroImage} tags={d.tags} facts={[{label:'Ocasión',value:d.occasion},{label:'Temporada',value:d.season},{label:'Paleta',value:d.palette.join(', ')},{label:'Prendas',value:String(d.pieces.length)}]}><Content/></GuideLayout>
+<GuideLayout title={d.title} description={d.description} section="Estilo" backHref="/estilo" heroImage={d.heroImage} tags={d.tags} facts={[{label:'Ocasión',value:String(d.occasion)},{label:'Temporada',value:String(d.season)},{label:'Paleta',value:(d.palette as string[]).join(', ')},{label:'Prendas',value:String((d.pieces as string[]).length)}]}>{stored?<Fragment set:html={stored.bodyHtml}/>:rendered&&<rendered.Content/>}</GuideLayout>

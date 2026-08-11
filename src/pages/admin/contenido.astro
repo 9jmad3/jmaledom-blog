@@ -27,7 +27,7 @@ Texto normal.
 
 1. Primer paso
 2. Segundo paso</pre></details></section>
-<footer class="publish-actions"><div><strong>Se publicará en la rama de pruebas</strong><small>Railway tardará aproximadamente un minuto en actualizar la web.</small></div><button class="publish-button" type="submit">Publicar contenido</button></footer><p class="publish-status" data-publish-status role="status"></p>
+<footer class="publish-actions"><div><strong>Se publicará directamente</strong><small>El contenido y la fotografía se guardarán en Railway.</small></div><button class="publish-button" type="submit">Publicar contenido</button></footer><p class="publish-status" data-publish-status role="status"></p>
 </form></main>
 <script>
 import { authClient } from '../../lib/auth-client';
@@ -79,8 +79,8 @@ async function loadSession() {
   logout.hidden = false;
   form.hidden = false;
   message.textContent = config.configured
-    ? `Sesión iniciada. Los cambios irán a ${config.branch}.`
-    : 'El panel está listo, pero falta configurar GITHUB_CONTENT_TOKEN en Railway.';
+    ? 'Sesión iniciada. El contenido se guardará en Railway.'
+    : 'El panel está listo, pero la base de datos de Railway no está conectada.';
   form.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled = !config.configured;
 }
 
@@ -110,10 +110,8 @@ form?.addEventListener('submit', async (event) => {
     status.classList.add('success');
     status.replaceChildren(document.createTextNode('Publicado. '));
     const link = document.createElement('a');
-    link.href = result.githubUrl;
-    link.target = '_blank';
-    link.rel = 'noreferrer';
-    link.textContent = 'Ver el archivo en GitHub';
+    link.href = result.previewUrl;
+    link.textContent = 'Ver la publicación';
     status.append(link);
     form.reset();
     slugInput.dataset.edited = '';

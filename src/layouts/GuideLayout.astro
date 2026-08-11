@@ -8,7 +8,7 @@ const { title, description, section, backHref, heroImage, facts, tags, note } = 
 ---
 <html lang="es"><head><BaseHead {title} {description} image={heroImage} /></head><body><Header /><main class="guide">
 	<a class="back" href={backHref}>← Volver a {section.toLowerCase()}</a><header class="intro"><p class="eyebrow">{section}</p><h1>{title}</h1><p>{description}</p></header>
-	{heroImage && <div class="hero"><Image src={heroImage} alt={`Imagen de ${title}`} width={1100} /></div>}
+	{heroImage && <div class="hero">{typeof heroImage === 'string' ? <img src={heroImage} alt={`Imagen de ${title}`} width="1100" height="760" /> : <Image src={heroImage} alt={`Imagen de ${title}`} width={1100} />}</div>}
 	<div class="facts">{facts.map((fact)=><div><small>{fact.label}</small><strong>{fact.value}</strong></div>)}</div><div class="tags">{tags.map((tag)=><span>{tag}</span>)}</div>
 	{note && <p class="note">{note}</p>}<article class="content"><slot /></article>
 </main><Footer /></body></html>

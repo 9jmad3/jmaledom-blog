@@ -1,5 +1,5 @@
 ---
-import { getCollection, render } from 'astro:content'; import GuideLayout from '../../layouts/GuideLayout.astro';
-export async function getStaticPaths(){return (await getCollection('recetas')).map((entry)=>({params:{slug:entry.id},props:{entry}}))} const {entry}=Astro.props; const {Content}=await render(entry); const d=entry.data;
+import { getEntry, render } from 'astro:content'; import GuideLayout from '../../layouts/GuideLayout.astro'; import { getStoredContent } from '../../lib/content-store';
+export const prerender=false; const slug=Astro.params.slug!; const stored=await getStoredContent('recetas',slug); const entry=stored?null:await getEntry('recetas',slug); if(!stored&&!entry)return Astro.redirect('/404'); const rendered=entry?await render(entry):null; const d:any=stored?{...stored.details,title:stored.title,description:stored.description,tags:stored.tags,heroImage:stored.imagePath}:entry!.data;
 ---
-<GuideLayout title={d.title} description={d.description} section="Recetas" backHref="/recetas" heroImage={d.heroImage} tags={d.tags} facts={[{label:'Tiempo',value:`${d.time} min`},{label:'Dificultad',value:d.difficulty},{label:'Raciones',value:String(d.servings)},...(d.protein?[{label:'Proteína aprox.',value:`${d.protein} g`}]:[])]}><Content/></GuideLayout>
+<GuideLayout title={d.title} description={d.description} section="Recetas" backHref="/recetas" heroImage={d.heroImage} tags={d.tags} facts={[{label:'Tiempo',value:`${d.time} min`},{label:'Dificultad',value:String(d.difficulty)},{label:'Raciones',value:String(d.servings)},...(d.protein?[{label:'Proteína aprox.',value:`${d.protein} g`}]:[])]}>{stored?<Fragment set:html={stored.bodyHtml}/>:rendered&&<rendered.Content/>}</GuideLayout>
