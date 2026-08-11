@@ -20,7 +20,7 @@ const areas = [
 		<Header />
 		<main class="home">
 			<section class="hero"><p class="eyebrow">Hola, soy José</p><h1>Una vida no cabe<br />en una sola categoría<span>.</span></h1><p>Este es mi espacio personal: reflexiones, recetas y todo lo que vaya apareciendo por el camino.</p><a href="#explorar">Explorar la web ↓</a></section>
-			<section class="areas" id="explorar" aria-labelledby="areas-title"><header><p class="eyebrow">Todo en un mismo sitio</p><h2 id="areas-title">Elige por dónde empezar</h2></header><div class="area-grid">{areas.map((area) => <article class={area.tone}><a class="area-main" href={area.href}><h3>{area.title}</h3><p>{area.copy}</p><strong>Entrar →</strong></a>{area.latest && <a class="latest-link" href={area.latest.href}><small>Lo último</small><span>{area.latest.title}</span></a>}</article>)}</div></section>
+			<section class="areas" id="explorar" aria-labelledby="areas-title"><header><p class="eyebrow">Todo en un mismo sitio</p><h2 id="areas-title">Elige por dónde empezar</h2></header><div class="area-grid">{areas.map((area) => <article class={area.tone}><a class="area-main" href={area.href}><h3>{area.title}</h3><p>{area.copy}</p><strong>Entrar →</strong></a>{area.latest && <a class="latest-link" href={area.latest.href} title={area.latest.title}><small>Lo último</small><span>{area.latest.title}</span></a>}</article>)}</div></section>
 			<section class="about-strip"><div><p class="eyebrow">Detrás de jmaledom</p><h2>José, sin demasiadas etiquetas.</h2><p>Gym por salud mental, salsa y bachata porque el cuerpo también piensa, y curiosidad por casi todo lo demás.</p></div><a href="/about">Conóceme mejor →</a></section>
 		</main>
 		<Footer />
@@ -31,11 +31,12 @@ const areas = [
 	.home .hero { max-width: none; }
 	.home .hero h1 { max-width: none; }
 	.home .areas { margin-top: 7rem; }
-	.home .area-grid { grid-template-columns: 1fr; }
+	.home .area-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	.home .latest-link { display: grid; grid-template-columns: auto minmax(0, 1fr); font-size: .9rem; }
-	.home .latest-link span { white-space: nowrap; }
+	.home .latest-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	@media (max-width: 720px) {
 		.home.home { width: 1100px; }
+		.home .area-grid { grid-template-columns: 1fr; }
 		.home .latest-link span { white-space: normal; }
 	}
 </style>
