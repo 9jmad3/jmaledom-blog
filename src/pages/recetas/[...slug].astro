@@ -1,0 +1,5 @@
+---
+import { getCollection, render } from 'astro:content'; import GuideLayout from '../../layouts/GuideLayout.astro';
+export async function getStaticPaths(){return (await getCollection('recetas')).map((entry)=>({params:{slug:entry.id},props:{entry}}))} const {entry}=Astro.props; const {Content}=await render(entry); const d=entry.data;
+---
+<GuideLayout title={d.title} description={d.description} section="Recetas" backHref="/recetas" heroImage={d.heroImage} tags={d.tags} facts={[{label:'Tiempo',value:`${d.time} min`},{label:'Dificultad',value:d.difficulty},{label:'Raciones',value:String(d.servings)},...(d.protein?[{label:'Proteína aprox.',value:`${d.protein} g`}]:[])]}><Content/></GuideLayout>

@@ -1,0 +1,12 @@
+---
+import { Image } from 'astro:assets';
+interface Props { href: string; title: string; description: string; eyebrow: string; meta: string; image?: any; tone: 'food' | 'training' | 'style' }
+const { href, title, description, eyebrow, meta, image, tone } = Astro.props;
+---
+<a class={`content-card ${tone}`} {href}>
+	<div class="visual">{image ? <Image src={image} alt="" width={720} height={520} /> : <span aria-hidden="true">{tone === 'food' ? 'RECETA' : tone === 'training' ? 'RUTINA' : 'LOOK'}</span>}</div>
+	<div class="copy"><p class="eyebrow">{eyebrow}</p><h2>{title}</h2><p>{description}</p><small>{meta}</small></div>
+</a>
+<style>
+	.content-card{display:grid;grid-template-columns:minmax(180px,.75fr) 1.25fr;min-height:300px;overflow:hidden;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:22px;text-decoration:none;transition:transform .2s ease,border-color .2s ease}.content-card:hover{color:var(--text);border-color:var(--accent);transform:translateY(-3px)}.visual{display:grid;min-height:260px;place-items:center;overflow:hidden;background:#e7b66d}.training .visual{background:#99b7a0}.style .visual{background:#a8a1b9}.visual :global(img){width:100%;height:100%;object-fit:cover;border-radius:0}.visual span{color:rgb(255 255 255/.85);font-size:clamp(2rem,5vw,4rem);font-weight:800;letter-spacing:-.06em;transform:rotate(-8deg)}.copy{display:flex;padding:clamp(1.25rem,4vw,2.5rem);flex-direction:column;justify-content:center}.eyebrow{margin:0 0 .4rem;color:var(--accent);font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}h2{margin:0 0 .65rem;font-size:clamp(1.7rem,3vw,2.5rem);letter-spacing:-.035em}.copy>p:not(.eyebrow){margin:0 0 1.2rem;color:var(--muted);line-height:1.5}small{color:var(--text);font-weight:700}@media(max-width:650px){.content-card{grid-template-columns:1fr}.visual{min-height:180px;aspect-ratio:16/8}}
+</style>

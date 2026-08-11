@@ -1,0 +1,5 @@
+---
+import { getCollection, render } from 'astro:content'; import GuideLayout from '../../layouts/GuideLayout.astro';
+export async function getStaticPaths(){return (await getCollection('entrenos')).map((entry)=>({params:{slug:entry.id},props:{entry}}))} const {entry}=Astro.props; const {Content}=await render(entry); const d=entry.data;
+---
+<GuideLayout title={d.title} description={d.description} section="Entrenos" backHref="/entrenos" heroImage={d.heroImage} tags={d.tags} facts={[{label:'Duración',value:`${d.duration} min`},{label:'Nivel',value:d.level},{label:'Objetivo',value:d.goal},{label:'Material',value:d.equipment.join(', ')}]} note="Esta rutina refleja mi experiencia personal. Adáptala a tu nivel y consulta con un profesional si tienes dudas o alguna lesión."><Content/></GuideLayout>
