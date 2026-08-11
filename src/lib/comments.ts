@@ -17,7 +17,7 @@ export function isTrustedRequest(request: Request) {
 	const origin = request.headers.get('origin');
 	if (!origin) return false;
 	const expected = new URL(process.env.SITE_URL ?? process.env.BETTER_AUTH_URL ?? request.url).origin;
-	return origin === expected || (import.meta.env.DEV && origin === new URL(request.url).origin);
+	return origin === expected || origin === new URL(request.url).origin;
 }
 
 export async function getViewer(request: Request) {
