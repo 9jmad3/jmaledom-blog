@@ -12,7 +12,12 @@ export default defineConfig({
 	// State-changing API routes validate their public origin explicitly. Railway's proxy
 	// otherwise makes Astro reject legitimate multipart uploads before they reach the route.
 	security: { checkOrigin: false },
-	integrations: [mdx(), sitemap({ filter: (page) => !page.endsWith('/comentarios/') && !page.includes('/admin/') })],
+	integrations: [mdx(), sitemap({ filter: (page) =>
+		!page.endsWith('/comentarios/') &&
+		!page.includes('/admin/') &&
+		!page.includes('/entrenos') &&
+		!page.includes('/estilo')
+	})],
 	fonts: [
 		{
 			provider: fontProviders.local(),

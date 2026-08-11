@@ -6,7 +6,7 @@ export const GET: APIRoute = ({ site }) => {
 	const isStaging = import.meta.env.SITE_ENVIRONMENT === 'staging';
 	const rules = isStaging
 		? 'User-agent: *\nDisallow: /\n'
-		: `User-agent: *\nAllow: /\nSitemap: ${sitemapURL}\n`;
+		: `User-agent: *\nAllow: /\nDisallow: /entrenos\nDisallow: /estilo\nSitemap: ${sitemapURL}\n`;
 
 	return new Response(rules, {
 		headers: { 'Content-Type': 'text/plain; charset=utf-8' },
