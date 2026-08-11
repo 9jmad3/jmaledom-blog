@@ -2,7 +2,7 @@
 title: Albóndigas veganas fitness de soja texturizada con cayena y jengibre
 description: Albóndigas vegetales ricas en proteínas y fibra, con una textura similar a la carne picada y un toque especiado.
 pubDate: 2026-08-11
-heroImage: ../../assets/albondigas-veganas-soja.webp
+heroImage: ../../assets/albondigas-veganas-airfryer.jpeg
 time: 45
 servings: 2
 difficulty: Fácil
