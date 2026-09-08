@@ -27,6 +27,9 @@ export const GET: APIRoute = async ({ url, request }) => {
 	const article = url.searchParams.get('article')?.trim() ?? '';
 	const visitorId = url.searchParams.get('visitor')?.trim() ?? '';
 	if (!(await interactionTargetExists(article))) return json({ error: 'Contenido no válido.' }, 400);
+	if (!process.env.DATABASE_URL) {
+		return json({ totals: { like: 0, think: 0, relate: 0 }, selected: null });
+	}
 
 	const identity = await getIdentity(request, visitorId);
 	const result = await requireDatabase().query(
@@ -48,6 +51,7 @@ export const GET: APIRoute = async ({ url, request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
 	if (!isTrustedRequest(request)) return json({ error: 'Origen no permitido.' }, 403);
+	if (!process.env.DATABASE_URL) return json({ error: 'Las reacciones no están disponibles en local.' }, 503);
 	const input = await request.json().catch(() => null) as { article?: string; reaction?: string | null; visitorId?: string } | null;
 	const article = input?.article?.trim() ?? '';
 	const reaction = input?.reaction ?? null;

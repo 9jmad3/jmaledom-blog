@@ -8,6 +8,7 @@ export const prerender = false;
 export const GET: APIRoute = async ({ url, request }) => {
 	const article = url.searchParams.get('article')?.trim() ?? '';
 	if (!(await interactionTargetExists(article))) return json({ error: 'El contenido no existe.' }, 404);
+	if (!process.env.DATABASE_URL) return json({ comments: [], viewer: null });
 	const viewer = await getViewer(request);
 
 	const result = await requireDatabase().query(
@@ -26,6 +27,7 @@ export const GET: APIRoute = async ({ url, request }) => {
 
 export const POST: APIRoute = async (context) => {
 	if (!isTrustedRequest(context.request)) return json({ error: 'Origen no permitido.' }, 403);
+	if (!process.env.DATABASE_URL) return json({ error: 'Los comentarios no están disponibles en local.' }, 503);
 	let input: Record<string, unknown>;
 	try {
 		input = await context.request.json();
