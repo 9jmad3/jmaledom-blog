@@ -11,12 +11,15 @@ const { article } = Astro.props;
 		let maxScroll = 0;
 		let lastTick = Date.now();
 		let lastSent = 0;
+		let lastSentProgress = -1;
 
 		const isActive = () => document.visibilityState === 'visible' && document.hasFocus();
+		const isPaginated = () => Boolean(document.querySelector('[data-book-reader][data-paginated="true"]'));
 		const update = () => {
 			const now = Date.now();
 			if (isActive()) engagedSeconds = Math.min(3600, engagedSeconds + Math.min(5, Math.round((now - lastTick) / 1000)));
 			lastTick = now;
+			if (isPaginated()) return;
 			const available = document.documentElement.scrollHeight - innerHeight;
 			maxScroll = Math.max(maxScroll, available > 0 ? Math.min(100, Math.round((scrollY / available) * 100)) : 100);
 		};
@@ -24,12 +27,20 @@ const { article } = Astro.props;
 		const payload = () => JSON.stringify({ sessionId, article, engagedSeconds, maxScroll, completed: maxScroll >= 90 && engagedSeconds >= 20 });
 		const send = (beacon = false) => {
 			update();
-			if (engagedSeconds < 5 || engagedSeconds === lastSent) return;
+			if (engagedSeconds < 5 || (engagedSeconds === lastSent && maxScroll === lastSentProgress)) return;
 			lastSent = engagedSeconds;
+			lastSentProgress = maxScroll;
 			if (beacon && navigator.sendBeacon) navigator.sendBeacon('/api/analytics/reading', new Blob([payload()], { type: 'application/json' }));
 			else fetch('/api/analytics/reading', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload(), keepalive: true }).catch(() => {});
 		};
 
+		addEventListener('book:progress', (event) => {
+			if (!isPaginated()) return;
+			const progress = event.detail?.progress;
+			if (typeof progress !== 'number' || !Number.isFinite(progress)) return;
+			update();
+			maxScroll = Math.max(maxScroll, Math.min(100, Math.max(0, Math.round(progress))));
+		});
 		addEventListener('scroll', update, { passive: true });
 		addEventListener('focus', () => { lastTick = Date.now(); });
 		document.addEventListener('visibilitychange', () => document.hidden ? send(true) : lastTick = Date.now());

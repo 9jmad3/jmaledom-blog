@@ -15,6 +15,7 @@ export default defineConfig({
 	integrations: [mdx(), sitemap({ filter: (page) =>
 		!page.endsWith('/comentarios/') &&
 		!page.includes('/admin/') &&
+		!page.includes('/recetas') &&
 		!page.includes('/entrenos') &&
 		!page.includes('/estilo')
 	})],

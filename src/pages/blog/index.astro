@@ -1,117 +1,21 @@
 ---
-import { Image } from 'astro:assets';
 import { getCollection } from 'astro:content';
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import FormattedDate from '../../components/FormattedDate.astro';
-import Header from '../../components/Header.astro';
-import TagList from '../../components/TagList.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
-import { BLOG_TAG_SLUGS, getTagLabel, getTagUrl } from '../../lib/tags';
-
-const posts = (await getCollection('blog')).sort(
-	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-);
-const tagCounts = Object.fromEntries(
-	BLOG_TAG_SLUGS.map((tag) => [tag, posts.filter((post) => post.data.tags.includes(tag)).length]),
-);
+import BookLayout from '../../layouts/BookLayout.astro';
+const posts = (await getCollection('blog')).sort((a,b) => a.data.pubDate.valueOf() - b.data.pubDate.valueOf());
+const roman = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
 ---
-
-<!doctype html>
-<html lang="es">
-	<head>
-		<BaseHead title={`Reflexiones · ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
-	</head>
-	<body>
-		<Header />
-		<main class="blog-index">
-			<header class="blog-hero">
-				<div>
-					<p class="eyebrow">Ideas, historias y aprendizajes</p>
-					<h1>Reflexiones<span>.</span></h1>
-				</div>
-				<div class="blog-intro">
-					<p>Un lugar para detenerme, ordenar lo que pienso y dejar por escrito aquello que merece durar más que una conversación.</p>
-					<small>{posts.length} {posts.length === 1 ? 'publicación' : 'publicaciones'}</small>
-				</div>
-			</header>
-			<nav class="tag-navigation" aria-label="Explorar publicaciones por etiqueta">
-				<span>Explorar por tema</span>
-				{BLOG_TAG_SLUGS.map((tag) => (
-					<a href={getTagUrl(tag)}>{getTagLabel(tag)} <small>{tagCounts[tag]}</small></a>
-				))}
-			</nav>
-			<section aria-label="Publicaciones del blog">
-				<ul class="post-list">
-					{
-						posts.map((post, index) => (
-							<li class:list={{ featured: index === 0 }}>
-								<article class="post-card">
-									{post.data.heroImage && (
-										<a class="post-image" href={`/blog/${post.id}/`} aria-label={`Leer «${post.data.title}»`}><Image width={720} height={720} src={post.data.heroImage} alt={`Portada de «${post.data.title}»`} /></a>
-									)}
-									<div class="post-copy">
-										<p class="date"><FormattedDate date={post.data.pubDate} /></p>
-										<TagList tags={post.data.tags} compact />
-										<h2><a class="post-title" href={`/blog/${post.id}/`}>{post.data.title}</a></h2>
-										<p class="description">{post.data.description}</p>
-										<a class="read-more" href={`/blog/${post.id}/`}>Leer publicación →</a>
-									</div>
-								</article>
-							</li>
-						))
-					}
-				</ul>
-			</section>
-		</main>
-		<Footer />
-	</body>
-</html>
-
-<style>
-	.blog-index { width: 960px; padding-top: 5rem; }
-	.blog-hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: clamp(2rem, 8vw, 8rem); align-items: end; margin-bottom: 4rem; padding-bottom: 3rem; border-bottom: 1px solid var(--border); }
-	.eyebrow { margin: 0 0 .5rem; color: var(--accent); font-size: .75rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-	.blog-hero h1 { margin: 0; font-size: clamp(4rem, 10vw, 8rem); letter-spacing: -.07em; line-height: .82; }
-	.blog-hero h1 span { color: var(--accent); }
-	.blog-intro { color: var(--muted); }
-	.blog-intro p { margin-top: 0; font-size: 1.15rem; }
-	.blog-intro small { color: var(--text); font-weight: 700; }
-	.tag-navigation { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; margin: -1.5rem 0 2.5rem; }
-	.tag-navigation > span { margin-right: .2rem; color: var(--muted); font-size: .78rem; font-weight: 700; }
-	.tag-navigation a { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .7rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; font-size: .78rem; font-weight: 700; text-decoration: none; }
-	.tag-navigation a:hover { color: var(--accent); border-color: var(--accent); }
-	.tag-navigation small { color: var(--muted); font-size: .65rem; }
-	.post-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; margin: 0; padding: 0; list-style: none; }
-	.post-list li, .post-list li:first-child { width: 100%; margin: 0; text-align: left; }
-	.post-list li.featured { grid-column: 1 / -1; width: min(100%, 760px); justify-self: center; }
-	.post-card { position: relative; display: grid; height: 100%; overflow: hidden; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 22px; transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
-	.featured .post-card { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
-	.featured .post-image { height: 100%; min-height: 320px; }
-	.featured .post-copy { padding: clamp(1.5rem, 3vw, 2rem); }
-	.featured .post-copy h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); }
-	.post-card:hover { border-color: var(--accent); box-shadow: var(--box-shadow); transform: translateY(-5px); }
-	.post-image { overflow: hidden; }
-	.post-image :global(img) { display: block; width: 100%; height: 100%; aspect-ratio: 4/3; margin: 0; object-fit: cover; object-position: center top; border-radius: 0; transition: transform .4s ease; }
-	.featured .post-image :global(img) { aspect-ratio: auto; }
-	.post-card:hover .post-image :global(img) { transform: scale(1.035); }
-	.post-copy { display: flex; padding: clamp(1.5rem, 3vw, 2.25rem); flex-direction: column; justify-content: center; }
-	.post-copy .date { margin: 0 0 .8rem; color: var(--muted); font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-	.post-copy h2 { margin: 0 0 1rem; font-size: clamp(1.75rem, 3vw, 2.4rem); letter-spacing: -.05em; line-height: 1; }
-	.post-title { color: var(--text); text-decoration: none; }
-	.post-title::after { position: absolute; inset: 0; content: ''; }
-	.post-title:hover { color: var(--accent); }
-	.post-copy :global(.tag-list) { position: relative; z-index: 1; }
-	.post-copy .description { color: var(--muted); }
-	.read-more { margin-top: 1rem; color: var(--accent); font-weight: 700; text-decoration: none; }
-	@media (max-width: 760px) {
-		.blog-index { padding-top: 3rem; }
-		.blog-hero, .featured .post-card { grid-template-columns: 1fr; gap: 1.5rem; }
-		.blog-hero { margin-bottom: 2rem; }
-		.tag-navigation { margin-top: 0; }
-		.post-list { grid-template-columns: 1fr; }
-		.post-list li.featured { grid-column: auto; }
-		.featured .post-image { height: auto; min-height: 0; }
-		.featured .post-image :global(img) { aspect-ratio: 4 / 3; }
-	}
-</style>
+<BookLayout title="Índice · Pequeñas historias" description="El índice del libro de José: pequeñas historias sobre lo que vivo y lo que me hace pensar." runningTitle="Índice" previous={{href:'/',label:'Portada'}} next={{href:posts[0] ? `/blog/${posts[0].id}/` : '/about/',label:'Primera historia'}}>
+  <section class="book-page book-title-page">
+    <p class="book-kicker">José · jmaledom</p>
+    <h1>Pequeñas<br /><em>historias.</em></h1>
+    <p class="book-ornament" aria-hidden="true">❧</p>
+    <p class="dedication">Una vida no cabe<br />en una sola categoría.</p>
+    <p class="book-kicker">Un libro que se sigue escribiendo</p>
+  </section>
+  <section class="book-contents">
+    <p class="book-kicker">Elige una página. Quédate un rato.</p>
+    <h1>Índice</h1>
+    <ol>{posts.map((post,index) => <li><a href={`/blog/${post.id}/`}><span class="chapter-number">{roman[index] ?? index+1}</span><span class="chapter-label">{post.data.title}</span><span class="leader" aria-hidden="true"></span></a></li>)}</ol>
+    <ul class="backmatter"><li><a href="/about/">Sobre el autor <span class="leader" aria-hidden="true"></span></a></li><li><a href="/creditos/">Colofón y privacidad <span class="leader" aria-hidden="true"></span></a></li></ul>
+  </section>
+</BookLayout>

@@ -1,0 +1,153 @@
+---
+import type { ImageMetadata } from 'astro';
+import BaseHead from '../components/BaseHead.astro';
+import '../styles/book.css';
+interface Props {
+  title: string;
+  description: string;
+  image?: ImageMetadata;
+  runningTitle?: string;
+  previous?: { href: string; label: string };
+  next?: { href: string; label: string };
+}
+const { title, description, image, runningTitle = title, previous = { href: '/blog/', label: 'Índice' }, next = { href: '/about/', label: 'Sobre el autor' } } = Astro.props;
+---
+<!doctype html>
+<html lang="es">
+  <head><BaseHead {title} {description} {image} /><slot name="head" /></head>
+  <body class="book-site">
+    <main class="book-reader" data-book-reader data-previous={previous.href} data-next={next.href}>
+      <div class="book-spread">
+        <a class="book-close" href="/" aria-label="Cerrar el libro y volver a la portada" title="Cerrar el libro">×</a>
+        <a class="book-bookmark" href="/blog/" aria-label="Ir al índice del libro">Índice</a>
+        <div class="book-running" aria-hidden="true"><span>jmaledom · pequeñas historias</span><span>{runningTitle}</span></div>
+        <div class="book-window" data-book-window><div class="book-flow" data-book-flow><slot /></div></div>
+        <div class="book-folios" aria-hidden="true"><span data-folio-left>1</span><span data-folio-right>2</span></div>
+      </div>
+      <nav class="book-controls" aria-label="Pasar páginas del libro">
+        <a href={previous.href} data-book-prev data-label={previous.label}>← {previous.label}</a>
+        <span class="book-position" data-book-position role="status" aria-live="polite"></span>
+        <a href={next.href} data-book-next data-label={next.label}>{next.label} →</a>
+      </nav>
+      <div class="book-reading-options"><button type="button" data-book-continuous hidden>Leer seguido</button><span class="sr-only">Usa las flechas izquierda y derecha para pasar página.</span></div>
+    </main>
+    <slot name="after" />
+    <script is:inline>try { const theme = localStorage.getItem('theme'); if (theme) document.documentElement.dataset.theme = theme; } catch {}</script>
+  </body>
+</html>
+<script is:inline>
+  (() => {
+  const reader = document.querySelector('[data-book-reader]');
+  if (reader) {
+    const viewport = reader.querySelector('[data-book-window]');
+    const flow = reader.querySelector('[data-book-flow]');
+    const previous = reader.querySelector('[data-book-prev]');
+    const next = reader.querySelector('[data-book-next]');
+    const position = reader.querySelector('[data-book-position]');
+    const continuous = reader.querySelector('[data-book-continuous]');
+    let page = 0, columns = 2, totalPages = 1, step = 0, enabled = true;
+    let animationTimer;
+    function paint(animate = false) {
+      flow.style.transform = `translateX(${-page * step}px)`;
+      previous.textContent = page > 0 ? '← Página anterior' : `← ${previous.dataset.label}`;
+      next.textContent = page < totalPages - 1 ? 'Pasar página →' : `${next.dataset.label} →`;
+      previous.href = page > 0 ? `#pagina-${page * columns - columns + 1}` : reader.dataset.previous;
+      next.href = page < totalPages - 1 ? `#pagina-${(page + 1) * columns + 1}` : reader.dataset.next;
+      const start = page * columns + 1;
+      reader.querySelector('[data-folio-left]').textContent = String(start);
+      reader.querySelector('[data-folio-right]').textContent = String(start + 1);
+      position.textContent = `${columns === 2 ? `Páginas ${start}–${start + 1}` : `Página ${start}`} de ${totalPages * columns}`;
+      const progress = ((page + 1) / totalPages) * 100;
+      reader.dataset.progress = String(progress);
+      window.dispatchEvent(new CustomEvent('book:progress', { detail: { progress } }));
+      if (animate) {
+        reader.classList.remove('book-turning');
+        void reader.offsetWidth;
+        reader.classList.add('book-turning');
+        clearTimeout(animationTimer);
+        animationTimer = setTimeout(() => reader.classList.remove('book-turning'), 350);
+      }
+    }
+    function layout() {
+      if (!enabled) return;
+      const oldProgress = totalPages > 1 ? page / (totalPages - 1) : 0;
+      reader.dataset.paginated = 'true';
+      flow.style.transform = 'none';
+      columns = matchMedia('(max-width:760px)').matches ? 1 : 2;
+      const gap = parseFloat(getComputedStyle(flow).columnGap);
+      step = viewport.clientWidth + gap;
+      totalPages = Math.max(1, Math.ceil((flow.scrollWidth + gap - 2) / step));
+      page = Math.min(totalPages - 1, Math.round(oldProgress * (totalPages - 1)));
+      const hashPage = /^#pagina-(\d+)$/.exec(location.hash);
+      if (hashPage) page = Math.min(totalPages - 1, Math.floor((Number(hashPage[1]) - 1) / columns));
+      paint();
+    }
+    function turn(direction) {
+      if (!enabled) return false;
+      const target = page + direction;
+      if (target < 0 || target >= totalPages) return false;
+      page = target;
+      history.replaceState(null, '', `#pagina-${page * columns + 1}`);
+      paint(true);
+      return true;
+    }
+    previous.addEventListener('click', (event) => { if (turn(-1)) event.preventDefault(); });
+    next.addEventListener('click', (event) => { if (turn(1)) event.preventDefault(); });
+    document.addEventListener('keydown', (event) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.target?.closest('input,textarea,select,button,[contenteditable],details[open]')) return;
+      if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+        const direction = event.key === 'ArrowRight' ? 1 : -1;
+        event.preventDefault();
+        if (!turn(direction)) location.href = direction > 0 ? next.href : previous.href;
+      }
+    });
+    let touchStart = null;
+    viewport.addEventListener('touchstart', (event) => { touchStart = { x: event.touches[0].clientX, y: event.touches[0].clientY }; }, { passive: true });
+    viewport.addEventListener('touchend', (event) => {
+      if (!touchStart || window.getSelection()?.toString()) return;
+      const dx = event.changedTouches[0].clientX - touchStart.x;
+      const dy = event.changedTouches[0].clientY - touchStart.y;
+      if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.5) turn(dx < 0 ? 1 : -1);
+      touchStart = null;
+    }, { passive: true });
+    continuous.hidden = false;
+    continuous.addEventListener('click', () => {
+      enabled = !enabled;
+      continuous.textContent = enabled ? 'Leer seguido' : 'Leer por páginas';
+      reader.dataset.paginated = String(enabled);
+      if (enabled) layout();
+      else {
+        flow.style.transform = 'none';
+        previous.href = reader.dataset.previous;
+        next.href = reader.dataset.next;
+        previous.textContent = `← ${previous.dataset.label}`;
+        next.textContent = `${next.dataset.label} →`;
+        position.textContent = 'Lectura continua';
+      }
+    });
+    reader.addEventListener('focusin', (event) => {
+      if (!enabled || !flow.contains(event.target)) return;
+      const rect = event.target.getBoundingClientRect();
+      const windowRect = viewport.getBoundingClientRect();
+      if (rect.left < windowRect.left - 1 || rect.right > windowRect.right + 1) {
+        page = Math.max(0, Math.min(totalPages - 1, Math.floor((rect.left - windowRect.left + page * step) / step)));
+        paint();
+      }
+    });
+    flow.addEventListener('click', (event) => {
+      const anchor = event.target.closest('a[href="#notas"]');
+      if (anchor) {
+        const notes = document.querySelector('#notas');
+        if (notes) { event.preventDefault(); notes.open = true; notes.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      }
+    });
+    layout();
+    document.fonts.ready.then(layout);
+    flow.querySelectorAll('img').forEach((img) => { if (!img.complete) img.addEventListener('load', layout, { once: true }); });
+    let resizeTimer;
+    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(layout, 180); });
+    window.addEventListener('hashchange', layout);
+    window.addEventListener('load', layout, { once: true });
+  }
+  })();
+</script>

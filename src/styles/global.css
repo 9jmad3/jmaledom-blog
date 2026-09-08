@@ -5,6 +5,7 @@
  */
 
 :root {
+	--serif: Georgia, 'Times New Roman', serif;
 	--accent: #e8502e;
 	--accent-dark: #b72e14;
 	--black: 15, 18, 25;

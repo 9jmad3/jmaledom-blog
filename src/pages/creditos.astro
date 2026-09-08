@@ -1,0 +1,47 @@
+---
+import BookLayout from '../layouts/BookLayout.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import { AUTHOR_NAME, INSTAGRAM_URL } from '../consts';
+const year = new Date().getFullYear();
+---
+
+<BookLayout title="Últimas páginas · jmaledom" description="Gracias por leer. Créditos, contacto y privacidad del libro de jmaledom." runningTitle="Últimas páginas" previous={{ href: '/about/', label: 'El autor' }} next={{ href: '/privacidad/', label: 'Privacidad' }}>
+	<section class="book-page book-title-page">
+		<p class="book-kicker">Por ahora</p>
+		<h1>Fin.</h1>
+		<p class="book-ornament" aria-hidden="true">❦</p>
+		<p class="dedication">Gracias por hacer un hueco a estas pequeñas historias.</p>
+		<p class="book-signature">José</p>
+	</section>
+	<section class="book-page book-colophon">
+		<p class="book-kicker">Colofón</p>
+		<h2>Un libro que sigue abierto.</h2>
+		<p>Escrito por {AUTHOR_NAME}.<br />Publicado en jmaledom.</p>
+		<p>© {year} {AUTHOR_NAME} · jmaledom</p>
+		<hr />
+		<p><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Encuéntrame en Instagram ↗</a></p>
+		<p><a href="/rss.xml">Seguir las historias por RSS</a></p>
+		<p><a href="/privacidad/">Privacidad</a> · <a href="/blog/">Volver al índice</a></p>
+		<div class="reading-theme"><span>La luz de estas páginas</span><ThemeToggle /></div>
+		<nav class="book-admin-links" aria-label="Administración" hidden data-book-admin>
+			<a href="/admin/contenido/">Publicar</a>
+			<a href="/comentarios/">Moderación</a>
+		</nav>
+	</section>
+</BookLayout>
+
+<script>
+	const admin = document.querySelector<HTMLElement>('[data-book-admin]');
+	if (admin) {
+		fetch('/api/comments/admin-session')
+			.then((response) => response.ok ? response.json() : null)
+			.then((session) => { admin.hidden = !session?.isAdmin; })
+			.catch(() => { admin.hidden = true; });
+	}
+</script>
+
+<style>
+	.book-colophon h2{margin:.6em 0 1em;font-size:1.8rem}
+	.book-colophon a{color:var(--book-ink)}
+	.reading-theme{display:flex;justify-content:center;align-items:center;gap:12px;margin:1.5rem 0;font-size:12px;color:var(--book-muted)}
+</style>

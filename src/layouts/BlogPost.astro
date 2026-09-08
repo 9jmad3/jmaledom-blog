@@ -1,127 +1,29 @@
 ---
 import { Image } from 'astro:assets';
-import type { CollectionEntry } from 'astro:content';
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
+import { getCollection, type CollectionEntry } from 'astro:content';
+import BookLayout from './BookLayout.astro';
 import FormattedDate from '../components/FormattedDate.astro';
-import Header from '../components/Header.astro';
 import ShareButton from '../components/ShareButton.astro';
 import Comments from '../components/Comments.astro';
 import Reactions from '../components/Reactions.astro';
-import TagList from '../components/TagList.astro';
-import type { BlogTag } from '../lib/tags';
 import ReadingAnalytics from '../components/ReadingAnalytics.astro';
-
 type PostLink = { id: string; title: string };
-type Props = CollectionEntry<'blog'>['data'] & {
-	readingMinutes: number;
-	tags: BlogTag[];
-	newerPost?: PostLink;
-	olderPost?: PostLink;
-};
-
-const { title, description, pubDate, updatedDate, heroImage, socialImage, readingMinutes, tags, newerPost, olderPost } = Astro.props;
+type Props = CollectionEntry<'blog'>['data'] & { readingMinutes: number; newerPost?: PostLink; olderPost?: PostLink; };
+const { title, description, pubDate, heroImage, socialImage, readingMinutes, newerPost, olderPost } = Astro.props;
 const articleSlug = Astro.url.pathname.split('/').filter(Boolean).at(-1) ?? '';
+const posts = (await getCollection('blog')).sort((a,b)=>a.data.pubDate.valueOf()-b.data.pubDate.valueOf());
+const chapter = posts.findIndex(post=>post.id===articleSlug)+1;
 ---
-
-<html lang="es">
-	<head>
-		<BaseHead title={title} description={description} image={socialImage ?? heroImage} />
-		<style>
-			main {
-				width: calc(100% - 2em);
-				max-width: 100%;
-				margin: 0;
-			}
-			.hero-image {
-				width: 100%;
-			}
-			.hero-image img {
-				display: block;
-				width: min(100%, 720px);
-				height: auto;
-				object-position: center top;
-				margin: 0 auto;
-				border-radius: 12px;
-				box-shadow: var(--box-shadow);
-			}
-			.prose {
-				width: 720px;
-				max-width: calc(100% - 2em);
-				margin: auto;
-				padding: 1em;
-				color: rgb(var(--gray-dark));
-			}
-			.title {
-				margin-bottom: 1em;
-				padding: 1em 0;
-				text-align: center;
-				line-height: 1;
-			}
-			.title h1 {
-				margin: 0 0 0.5em 0;
-			}
-			.date {
-				margin-bottom: 0.5em;
-				color: rgb(var(--gray));
-			}
-			.last-updated-on {
-				font-style: italic;
-			}
-			.meta-separator { margin: 0 .45rem; }
-			.post-navigation { margin: 4rem 0 2rem; padding-top: 2rem; border-top: 1px solid var(--border); }
-			.post-navigation h2 { margin-bottom: 1.25rem; font-size: 1.5rem; }
-			.post-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-			.post-link { display: flex; min-height: 110px; padding: 1rem; box-sizing: border-box; flex-direction: column; justify-content: space-between; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; text-decoration: none; transition: transform .2s ease, border-color .2s ease; }
-			.post-link:hover { color: var(--text); border-color: var(--accent); transform: translateY(-3px); }
-			.post-link small { color: var(--accent); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-			.post-link strong { line-height: 1.25; }
-			@media (max-width: 600px) { .post-links { grid-template-columns: 1fr; } }
-		</style>
-	</head>
-
-	<body>
-		<Header />
-		<main>
-			<article>
-				<div class="hero-image">
-					{heroImage && <Image width={1020} src={heroImage} alt={`Portada de «${title}»`} />}
-				</div>
-				<div class="prose">
-					<div class="title">
-						<div class="date">
-							<FormattedDate date={pubDate} />
-							<span class="meta-separator" aria-hidden="true">·</span>
-							<span class="reading-time">{readingMinutes} min de lectura</span>
-							{
-								updatedDate && (
-									<div class="last-updated-on">
-										Actualizado el <FormattedDate date={updatedDate} />
-									</div>
-								)
-							}
-						</div>
-						<h1>{title}</h1>
-						<TagList {tags} />
-						<hr />
-					</div>
-					<slot />
-					<Reactions article={articleSlug} />
-					<ShareButton {title} {description} />
-					<Comments article={articleSlug} />
-					{(newerPost || olderPost) && (
-						<nav class="post-navigation" aria-label="Más artículos">
-							<h2>Sigue leyendo</h2>
-							<div class="post-links">
-								{olderPost && <a class="post-link" href={`/blog/${olderPost.id}/`}><small>Artículo anterior</small><strong>{olderPost.title}</strong></a>}
-								{newerPost && <a class="post-link" href={`/blog/${newerPost.id}/`}><small>Artículo siguiente</small><strong>{newerPost.title}</strong></a>}
-							</div>
-						</nav>
-					)}
-				</div>
-			</article>
-		</main>
-		<Footer />
-		<ReadingAnalytics article={articleSlug} />
-	</body>
-</html>
+<BookLayout {title} {description} image={socialImage ?? heroImage} runningTitle={title} previous={olderPost ? {href:`/blog/${olderPost.id}/`,label:'Historia anterior'} : {href:'/blog/',label:'Índice'}} next={newerPost ? {href:`/blog/${newerPost.id}/`,label:'Siguiente historia'} : {href:'/about/',label:'Sobre el autor'}}>
+  <header class="book-page book-chapter-heading">
+    <p class="book-kicker">Historia {String(chapter).padStart(2,'0')}</p>
+    <h1>{title}</h1>
+    <p class="book-chapter-meta"><FormattedDate date={pubDate} /> · {readingMinutes} min de lectura</p>
+    {heroImage && <Image class="chapter-photo" width={720} src={heroImage} alt={`Fotografía de la historia «${title}»`} />}
+  </header>
+  <article class="book-story"><slot /><div class="book-story-end"><p class="book-ornament" aria-hidden="true">❧</p><p>Hasta aquí, esta historia.</p><a href="#notas">Dejar una nota al margen</a></div></article>
+  <Fragment slot="after">
+    <details class="book-notes" id="notas"><summary>Notas al margen · comentarios y reacciones</summary><Reactions article={articleSlug} /><ShareButton {title} {description} /><Comments article={articleSlug} /></details>
+    <ReadingAnalytics article={articleSlug} />
+  </Fragment>
+</BookLayout>
