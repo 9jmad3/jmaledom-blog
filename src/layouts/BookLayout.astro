@@ -75,7 +75,8 @@ const { title, description, image, runningTitle = title, previous = { href: '/bl
       flow.style.transform = 'none';
       columns = matchMedia('(max-width:760px)').matches ? 1 : 2;
       const gap = parseFloat(getComputedStyle(flow).columnGap);
-      step = viewport.clientWidth + gap;
+      // Columns can have fractional widths; rounding each turn gradually clips the text.
+      step = flow.getBoundingClientRect().width + gap;
       totalPages = Math.max(1, Math.ceil((flow.scrollWidth + gap - 2) / step));
       page = Math.min(totalPages - 1, Math.round(oldProgress * (totalPages - 1)));
       const hashPage = /^#pagina-(\d+)$/.exec(location.hash);
